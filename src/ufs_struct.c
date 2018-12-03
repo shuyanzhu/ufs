@@ -23,8 +23,8 @@ int Init(char *path)
     setbuf(fp, NULL);
 
     if (fseek(fp, UFSSIZE - 1, SEEK_SET) < 0) return FSERR;
-    unsigned char i = 0;
-    if (fwrite(&i, 1, 1, fp) != 1) return FWERR;
+    unsigned char c = 0;
+    if (fwrite(&c, 1, 1, fp) != 1) return FWERR;
     if (fseek(fp, 0, SEEK_SET) < 0) return FSERR;
 
     // 初始化超级快
@@ -36,23 +36,21 @@ int Init(char *path)
 
     // 初始化索引节点列表
     unsigned char zeros[4096] = {0};
+    unsigned int i = 0;
     if (fseek(fp, ITABLEBGN * BLKSIZE, SEEK_SET) < 0) return FSERR;
-    int i = 0;
     for (i = 0; i < BLKSOFIN / 4; i++)
         if (fwrite(zeros, sizeof(zeros), 1, fp) != 1) return FWERR;
 
     struct DInode rooti; // 磁盘索引节点的根节点
     rooti.type = 1;
     rooti.fSize = 0;
-    rooti.iNum = 1;
+    rooti.lNum = 1;
     memset(&rooti.blkAddr[0], 0, BLKADDR);
     if (fseek(fp, ITABLEBGN * BLKSIZE, SEEK_SET) < 0) return FSERR;
-    if (fwrite(&rooti, sizeof(struct DInode), 1, fp) != 1)
-        return FWERR
+    if (fwrite(&rooti, sizeof(struct DInode), 1, fp) != 1) return FWERR;
 
-               // 初始化磁盘块
-               int i = DATABGN,
-                   j = 0;
+    // 初始化磁盘块
+    int j = 0;
     unsigned int fBlk[FREEBNUM];
     for (i = DATABGN + FREEBNUM - 1; i < UFSSIZE / BLKSIZE; i = i + FREEBNUM) {
         for (int j = 0; j < (FREEBNUM - 2); j++)

@@ -15,13 +15,13 @@
 
 // 磁盘大小宏
 #define BLKSIZE (1u << 10)
-#define BLKSOFSU 2
+#define BLKSOFSU 2u
 #define BLKSOFIN (1u << 14)
 #define ITABLEBGN BLKSOFSU
 #define DATABGN (BLKSOFSU + BLKSOFIN)
 
 // 超级块宏
-#define UFSSIZE (2 * 1024 * 1024 * 1024)
+#define UFSSIZE (2u * 1024 * 1024 * 1024)
 #define UFSMAGIC 19981019
 #define FREEINUM 249
 #define FREEBNUM 256
