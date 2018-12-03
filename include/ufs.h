@@ -8,8 +8,13 @@
 #ifndef __NDSL_UFS_H__
 #define __NDSL_UFS_H__
 
-#define UO_RD 1
-#define UO_WR (1u << 1)
+#define UO_RD 0
+#define UO_WR 1
+#define UO_RDWR (1u << 1)
+#define UO_APPEND (1u << 2)
+#define UO_CREAT (1u << 3)
+#define UO_TRUNC (1u << 4)
+
 /*
 typedef struct
 {
