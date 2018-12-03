@@ -13,7 +13,7 @@ struct
 } i;
 int main()
 {
-    printf("%d\n", (1u << 10));
+    printf("%ld\n", 2l * 1024 * 1024 * 1024);
     int zeros[1024];
     printf("unsigned size: %d\n", sizeof(2u));
     return 0;

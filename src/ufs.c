@@ -50,9 +50,10 @@ int UfsInit(char *path)
         _quit("UfsInit: fread failed");
     fclose(ufsFp);
 
-    if (super.magic == UFSMAGIC)
-        return 9;
-    else
+    if (super.magic == UFSMAGIC) {
+        printf("磁盘已安装文件系统, 初始化完成\n");
+        return 0;
+    } else
         _init(path);
     return 0;
 }
