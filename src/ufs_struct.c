@@ -29,6 +29,7 @@ int Init(char *path)
     if (fseek(fp, 0, SEEK_SET) < 0) return FSERR;
 
     // 初始化超级快
+	memset(&super, 0, sizeof(super));
     super.magic = UFSMAGIC;
     super.diskSize = UFSSIZE;
     super.inodeNum = 1u << (24 - 6);
@@ -50,9 +51,6 @@ int Init(char *path)
     if (fseek(fp, ITABLEBGN * BLKSIZE, SEEK_SET) < 0) return FSERR;
     if (fwrite(&rooti, sizeof(struct DInode), 1, fp) != 1) return FWERR;
 
-    /////////////////////////////////////////////////////////////////////////////////
-    int debug = 0;
-    /////////////////////////////////////////////////////////////////////////////////
     // 初始化磁盘块
     int j = 0;
     unsigned int fBlk[FREEBNUM];
@@ -62,10 +60,6 @@ int Init(char *path)
         fBlk[FREEBNUM - 1] = i + FREEBNUM;
         if (fseek(fp, i * BLKSIZE, SEEK_SET) < 0) return FSERR;
         if (fwrite(fBlk, sizeof(fBlk), 1, fp) != 1) return FWERR;
-        ////////////////////////////////////////////////////////////////////////////////
-        fprintf(stderr, "%d %u %ld\n", ++debug, i, ftell(fp));
-        system("du ufs");
-        ////////////////////////////////////////////////////////////////////////////////
     }
 
     printf("%ud\n", i);
@@ -77,8 +71,5 @@ int Init(char *path)
     if (fread(super.freeBlk, sizeof(super.freeBlk), 1, fp) != 1) return FRERR;
     if (fseek(fp, 0, SEEK_SET) < 0) return FSERR;
     if (fwrite(&super, sizeof(super), 1, fp) != 1) return FSERR;
-    ////////////////////////////////////////////////////////////////////////////////
-    system("du ufs");
-    ////////////////////////////////////////////////////////////////////////////////
     return 0;
 }
