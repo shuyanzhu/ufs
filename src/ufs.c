@@ -32,7 +32,7 @@ extern struct SuperBlk super;
 int UfsInit(char *path)
 {
     FILE *ufsFp = fopen(path, "r+");
-    if (ufsFp == NULL) _quit("UfsInit: 文件不存在");
+    if (ufsFp == NULL) _quit("UfsInit: 文件打开错误");
     setbuf(ufsFp, NULL);
 
     // 获得文件大小, 文件系统最大为2G
@@ -48,12 +48,13 @@ int UfsInit(char *path)
     // 获取超级快
     if (fread(&super, sizeof(super), 1, ufsFp) != 1)
         _quit("UfsInit: fread failed");
-    fclose(ufsFp);
-
     if (super.magic == UFSMAGIC) {
         printf("磁盘已安装文件系统, 初始化完成\n");
         return 0;
-    } else
+    } else {
+        fclose(ufsFp);
         _init(path);
+    }
+
     return 0;
 }
