@@ -3,3 +3,4 @@ aaa
 ufs
 *.xml
 *.iml
+./test/*
