@@ -13,8 +13,12 @@ struct
 } i;
 int main()
 {
+    FILE *fp = fopen("data", "w+");
     printf("%ld\n", 2l * 1024 * 1024 * 1024);
-    int zeros[1024];
+    char zeros[2048] = {0};
+    unsigned int i = 0;
+    for (i = 0; i < (1u << 20); i++)
+        fwrite(zeros, sizeof(zeros), 1, fp);
     printf("unsigned size: %d\n", sizeof(2u));
     return 0;
 }

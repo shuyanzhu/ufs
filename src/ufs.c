@@ -35,15 +35,15 @@ int UfsInit(char *path)
     if (ufsFp == NULL) _quit("UfsInit: 文件不存在");
     setbuf(ufsFp, NULL);
 
-    // 获得文件大小
-    if (fseek(ufsFp, 0, SEEK_END) < 0) _quit("UfsInit: 确定文件大小出错");
-    long ufsLength = ftell(ufsFp);
-    if (fseek(ufsFp, 0, SEEK_SET) < 0) _quit("UfsInitL fseek failed");
+    // 获得文件大小, 文件系统最大为2G
+    if (fseek(ufsFp, -1, SEEK_END) < 0) _quit("UfsInit: 确定文件大小出错");
+    unsigned int ufsLength = ftell(ufsFp) + 1;
     if (ufsLength < sizeof(struct SuperBlk)) {
         fclose(ufsFp);
         _init(path);
         return 0;
     }
+    if (fseek(ufsFp, 0, SEEK_SET) < 0) _quit("UfsInitL fseek failed");
 
     // 获取超级快
     if (fread(&super, sizeof(super), 1, ufsFp) != 1)
