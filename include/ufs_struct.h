@@ -9,9 +9,10 @@
 #define __NDSL_UFS_STRUCT_H__
 
 // 错误宏
-#define FWERR -1
+#define FRERR -1
 #define FSERR -2
-#define FRERR -3
+#define FWERR -3
+#define FCERR -4
 
 // 磁盘大小宏
 #define BLKSIZE (1u << 10)
@@ -23,7 +24,7 @@
 // 超级块宏
 #define UFSSIZE (2u * 1024 * 1024 * 1024)
 #define UFSMAGIC 19981019
-#define FREEINUM 249
+#define FREEINUM 248
 #define FREEBNUM 256
 
 // 索引节点宏
@@ -44,11 +45,12 @@ struct SuperBlk
     unsigned int dirty;
 
     // 空闲索引节点表
+    unsigned int nextN;
     unsigned int freeInode[FREEINUM];
 
     // 空闲快表:sp
     unsigned int curBlk;
-    unsigned int pNext;
+    unsigned int nextB;
     unsigned int freeBlk[FREEBNUM];
 };
 

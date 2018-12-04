@@ -11,10 +11,6 @@
 #include "../include/ufs_struct.h"
 #include "../include/ufs.h"
 
-#ifndef NOTEST
-
-#endif
-
 static void _quit(char *err)
 {
     fprintf(stderr, "%s\n", err);
@@ -29,15 +25,18 @@ static void _init(char *path)
 }
 
 extern struct SuperBlk super;
+extern FILE *ufsFp;
 int UfsInit(char *path)
 {
-    FILE *ufsFp = fopen(path, "r+");
+    ufsFp = fopen(path, "r+");
     if (ufsFp == NULL) _quit("UfsInit: 文件打开错误");
     setbuf(ufsFp, NULL);
 
     // 获得文件大小, 文件系统最大为2G
-    if (fseek(ufsFp, -1, SEEK_END) < 0) _quit("UfsInit: 确定文件大小出错");
-    unsigned int ufsLength = ftell(ufsFp) + 1;
+    if (fseek(ufsFp, 0, SEEK_END) < 0) _quit("UfsInit: 确定文件大小出错");
+    ////////////////////////////////////////
+    long ufsLength = ftell(ufsFp); // 获取pos有移植性问题，要求x64，long=int64
+    ///////////////////////////////////////
     if (ufsLength < sizeof(struct SuperBlk)) {
         fclose(ufsFp);
         _init(path);
