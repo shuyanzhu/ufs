@@ -32,7 +32,8 @@
 #define ITABLESEEK (ITABLEBGN * BLKSIZE)
 
 //
-#define RDDIRNUM 32
+typedef long long int64;
+#define RDDIRNUM (BLKSIZE/sizeof(struct Dir))
 // 超级块数据结构
 struct SuperBlk
 {
@@ -57,12 +58,13 @@ struct DInode
     unsigned int lNum;             // 文件连接数目
     unsigned int blkAddr[BLKADDR]; // 文件块位置
 };
-// 目录结构
+// 目录结构, 断言长度为32
 struct Dir
 {
-    char name[12];     // 路径名分量至多为12
-    unsigned int iNbr; // 内存索引节点号
+    char name[28];     // 路径名分量至多为27
+    unsigned int iNbr; // 磁盘索引节点号
 };
+
 // 内存索引节点
 struct MInode
 {
@@ -74,4 +76,5 @@ struct MInode
 };
 int FindNextMInode(unsigned int iNbr);
 int NameI(unsigned int *iNum, char *path, int oflag);
+long _bmap(int64 pos, struct DInode i);
 #endif
