@@ -12,5 +12,8 @@
 int main()
 {
     UfsInit("ufs");
+    int fd1 = UfsOpen("/", 0);
+    int fd2 = UfsOpen("/abc", 0);
+    printf("%d %d\n", fd1, fd2);
     return 0;
 }

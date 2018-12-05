@@ -28,7 +28,11 @@
 #define INODESIZE (1u << 6)
 #define BLKADDR 13 // 索引节点中直接块和间接快的数目
 #define MINODES 1024 // 索引节点表大小
+#define ROOTISEEK (ITABLEBGN * BLKSIZE + INODESIZE)
+#define ITABLESEEK (ITABLEBGN * BLKSIZE)
 
+//
+#define RDDIRNUM 32
 // 超级块数据结构
 struct SuperBlk
 {
@@ -53,11 +57,20 @@ struct DInode
     unsigned int lNum;             // 文件连接数目
     unsigned int blkAddr[BLKADDR]; // 文件块位置
 };
+// 目录结构
+struct Dir{
+    char name[12]; // 路径名分量至多为12
+    unsigned int iNbr; // 内存索引节点号
+};
 // 内存索引节点
 struct MInode
 {
     struct DInode *Dp;
-    unsigned int ref;
+    unsigned int oflag; // 打开方式
+    unsigned int iNbr; // 磁盘索引节点号
+    unsigned int pos; // 文件偏移量
+    unsigned int pading; // 以备扩展
 };
-
+int FindNextMInode(unsigned int iNbr);
+int NameI(unsigned int *iNum, char *path, int oflag);
 #endif

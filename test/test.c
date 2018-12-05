@@ -7,18 +7,18 @@
 
 #include <stdio.h>
 
-struct
+struct I
 {
     char p[10];
 } i;
 int main()
 {
+    struct IZZ = malloc(sizeof(I));
     FILE *fp = fopen("data", "w+");
     printf("%ld\n", 2l * 1024 * 1024 * 1024);
-    int zeros[1024] = {0};
     unsigned int i = 0;
-    for (i = 0; i < (3000000); i++)
-        fwrite(zeros, sizeof(zeros), 1, fp);
-    printf("unsigned size: %d\n", sizeof(2u));
+    //    for (i = 0; i < (3000000); i++)
+    //      fwrite(zeros, sizeof(zeros), 1, fp);
+    printf("unsigned size: %d\n", (int)(I->p);
     return 0;
 }

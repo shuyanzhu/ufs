@@ -14,6 +14,8 @@
 #define UO_APPEND (1u << 2)
 #define UO_CREAT (1u << 3)
 #define UO_TRUNC (1u << 4)
+#define NOMOREFD -1
+#define NOTHATFL -2
 
 /*
 typedef struct
@@ -23,6 +25,7 @@ typedef struct
 // 初始化文件系统
 int UfsInit(char *path);
 int UfsOpen(char *path, int oflag);
+int UfsClose(int ufd);
 int UfsRead(int ufd, char *buf, int len);
 int UfsWrite(int ufd, char *buf, int len);
 int UfsUnlink(char *path);
