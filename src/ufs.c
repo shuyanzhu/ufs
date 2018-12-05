@@ -35,7 +35,7 @@ static int _init(char *path)
     super.inodeNum = 1u << (24 - 6);
     super.blkNum = UFSSIZE / BLKSIZE - DATABGN;
     super.dirty = 0;
-        
+
     // 写数据区磁盘块数组
     unsigned int i, j = 0;
     unsigned int fBlk[FREEBNUM];
@@ -53,7 +53,7 @@ static int _init(char *path)
         return FRERR;
     super.curBlk = DATABGN + FREEBNUM - 1;
     super.nextB = 0;
-    
+
     // 写索引节点列表区磁盘数组
     unsigned char zeros[4096] = {0};
     if (fseek(ufsFp, ITABLEBGN * BLKSIZE, SEEK_SET) < 0) return FSERR;
@@ -64,11 +64,12 @@ static int _init(char *path)
     rootI.fSize = 0;
     rootI.lNum = 15;
     memset(&rootI.blkAddr[0], 0, BLKADDR);
-    if (fseek(ufsFp, ITABLEBGN * BLKSIZE + sizeof(struct DInode), SEEK_SET) < 0) return FSERR;
+    if (fseek(ufsFp, ITABLEBGN * BLKSIZE + sizeof(struct DInode), SEEK_SET) < 0)
+        return FSERR;
     if (fwrite(&rootI, sizeof(struct DInode), 1, ufsFp) != 1) return FWERR;
-    for(i = 0; i < FREEINUM; i++)
+    for (i = 0; i < FREEINUM; i++)
         super.freeInode[i] = i + 2;
-    
+
     // 写超级块
     if (fseek(ufsFp, 0, SEEK_SET) < 0) return FSERR;
     if (fwrite(&super, sizeof(super), 1, ufsFp) != 1) return FSERR;
@@ -78,14 +79,15 @@ static int _init(char *path)
 
 int UfsInit(char *path)
 {
-    ufsFp = Fopen(path, "a+");Fclose(ufsFp); // 如果文件不存在，创建文件
+    ufsFp = Fopen(path, "a+");
+    Fclose(ufsFp); // 如果文件不存在，创建文件
     ufsFp = Fopen(path, "r+");
     setbuf(ufsFp, NULL);
-    
+
     // 初始化内存索引节点
     memset(mInodes, 0, sizeof(mInodes));
     maxUfd = 0;
-    
+
     // 获得文件大小, 文件系统最大为2G
     if (fseek(ufsFp, 0, SEEK_END) < 0) _quit("UfsInit: 确定文件大小出错");
     long ufsLength = ftell(ufsFp); // 获取pos有移植性问题，要求x64，long=int64
@@ -112,12 +114,13 @@ int UfsInit(char *path)
     return 0;
 }
 
-int UfsOpen(char *path, int oflag){
+int UfsOpen(char *path, int oflag)
+{
     unsigned int iNum = 0;
-    if(NameI(&iNum, path, oflag) < 0)return NOTHATFL;
+    if (NameI(&iNum, path, oflag) < 0) return NOTHATFL;
     int ufd = FindNextMInode(iNum);
-    if(ufd < 0) return NOMOREFD;
-    
+    if (ufd < 0) return NOMOREFD;
+
     struct DInode *Dp = malloc(sizeof(struct DInode));
     mInodes[ufd].Dp = Dp;
     Fseek(ufsFp, ITABLESEEK + iNum * INODESIZE, SEEK_SET);
@@ -125,21 +128,5 @@ int UfsOpen(char *path, int oflag){
     return ufd;
 }
 
-int UfsClose(int ufd){
-}
-    
-    
+int UfsClose(int ufd) {}
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
