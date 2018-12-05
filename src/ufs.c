@@ -7,7 +7,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <string.h>
 #include "../include/ufs_wrap.h"
 #include "../include/ufs_struct.h"
 #include "../include/ufs.h"
@@ -83,7 +83,7 @@ int UfsInit(char *path)
     setbuf(ufsFp, NULL);
     
     // 初始化内存索引节点
-    memeset(mInodes, 0, sizeof(mInodes));
+    memset(mInodes, 0, sizeof(mInodes));
     maxUfd = 0;
     
     // 获得文件大小, 文件系统最大为2G
@@ -91,9 +91,8 @@ int UfsInit(char *path)
     long ufsLength = ftell(ufsFp); // 获取pos有移植性问题，要求x64，long=int64
     if (ufsLength < sizeof(struct SuperBlk)) {
         fclose(ufsFp);
-        printf("无效的磁盘\n新的磁盘生成中...\n");
         if (_init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
-        printf("新的磁盘\n文件系统初始化成功\n");
+        printf("文件系统初始化成功\n");
         return 0;
     }
     if (fseek(ufsFp, 0, SEEK_SET) < 0) _quit("UfsInitL fseek failed");
@@ -101,16 +100,16 @@ int UfsInit(char *path)
     // 初始化超级块(磁盘)
     if (fread(&super, sizeof(super), 1, ufsFp) != 1)
         _quit("UfsInit: fread failed");
-    if (super.magic != UFSMAGIC) 
+    if (super.magic != UFSMAGIC) {
         fclose(ufsFp);
-        printf("无效的磁盘\n新的磁盘生成中...\n");
+        printf("无效的磁盘\n新的磁盘生成中\n");
         if (_init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
         printf("文件系统初始化成功\n");
         return 0;
     }
-    
+
     printf("文件系统初始化成功\n");
     return 0;
 }
 
-int UfsOpen(char *path, int oflag)
+//int UfsOpen(char *path, int oflag)

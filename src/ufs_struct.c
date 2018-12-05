@@ -15,5 +15,3 @@ struct SuperBlk super;
 FILE *ufsFp;
 struct MInode mInodes[MINODES];
 int maxUfd = 0;
-
-static init
