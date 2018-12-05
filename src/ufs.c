@@ -20,7 +20,7 @@ extern int maxUfd;
 // 初始化磁盘块
 static int _init(char *path)
 {
-    ufsFp = fopen(path, "w+");
+    ufsFp = fopen(path, "wb+");
     setbuf(ufsFp, NULL);
     // 初始化磁盘大小
     if (fseek(ufsFp, UFSSIZE - 1, SEEK_SET) < 0) return FSERR;
@@ -40,7 +40,7 @@ static int _init(char *path)
     unsigned int i, j = 0;
     unsigned int fBlk[FREEBNUM];
     for (i = DATABGN + FREEBNUM - 1; i < UFSSIZE / BLKSIZE; i = i + FREEBNUM) {
-        for (int j = 0; j < (FREEBNUM - 2); j++)
+        for (int j = 0; j < (FREEBNUM - 1); j++)
             fBlk[j] = i - (FREEBNUM - 1) + j;
         fBlk[FREEBNUM - 1] = i + FREEBNUM;
         if (fseek(ufsFp, i * BLKSIZE, SEEK_SET) < 0) return FSERR;
@@ -79,9 +79,9 @@ static int _init(char *path)
 
 int UfsInit(char *path)
 {
-    ufsFp = Fopen(path, "a+");
+    ufsFp = Fopen(path, "ab+");
     Fclose(ufsFp); // 如果文件不存在，创建文件
-    ufsFp = Fopen(path, "r+");
+    ufsFp = Fopen(path, "rb+");
     setbuf(ufsFp, NULL);
 
     // 初始化内存索引节点
