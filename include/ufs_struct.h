@@ -13,47 +13,38 @@
 #define FSERR -2
 #define FWERR -3
 #define FCERR -4
-
 // 磁盘大小宏
 #define BLKSIZE (1u << 10)
 #define BLKSOFSU 2u
 #define BLKSOFIN (1u << 14)
 #define ITABLEBGN BLKSOFSU
 #define DATABGN (BLKSOFSU + BLKSOFIN)
-
 // 超级块宏
 #define UFSSIZE (2u * 1024 * 1024 * 1024)
 #define UFSMAGIC 19981019
 #define FREEINUM 248
 #define FREEBNUM 256
-
 // 索引节点宏
 #define INODESIZE (1u << 6)
 #define BLKADDR 13 // 索引节点中直接块和间接快的数目
+#define MINODES 1024 // 索引节点表大小
 
+// 超级块数据结构
 struct SuperBlk
 {
-    // 魔数，标示文件系统
-    unsigned int magic;
-    // 磁盘大小
-    unsigned int diskSize;
-    // 剩余空闲索引节点数目
-    unsigned int inodeNum;
-    // 剩余磁盘块数目
-    unsigned int blkNum;
-    // 超级快是否被修改
-    unsigned int dirty;
-
+    unsigned int magic;    // 魔数
+    unsigned int diskSize; // 磁盘大小
+    unsigned int inodeNum; // 剩余索引节点
+    unsigned int blkNum;   // 剩余磁盘块
+    unsigned int dirty;    // 脏位
     // 空闲索引节点表
     unsigned int nextN;
     unsigned int freeInode[FREEINUM];
-
     // 空闲快表:sp
     unsigned int curBlk;
     unsigned int nextB;
     unsigned int freeBlk[FREEBNUM];
 };
-
 // 磁盘索引节点
 struct DInode
 {
@@ -62,6 +53,11 @@ struct DInode
     unsigned int lNum;             // 文件连接数目
     unsigned int blkAddr[BLKADDR]; // 文件块位置
 };
+// 内存索引节点
+struct MInode
+{
+    struct DInode *Dp;
+    unsigned int ref;
+};
 
-int Init(char *path);
 #endif
