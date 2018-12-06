@@ -22,7 +22,7 @@
 // 超级块宏
 #define UFSSIZE (2u * 1024 * 1024 * 1024)
 #define UFSMAGIC 19981019
-#define FREEINUM 248
+#define FREEINUM 249
 #define FREEBNUM 256
 // 索引节点宏
 #define INODESIZE (1u << 6)
@@ -46,7 +46,6 @@ struct SuperBlk
     unsigned int nextN;
     unsigned int freeInode[FREEINUM];
     // 空闲快表:sp
-    unsigned int curBlk;
     unsigned int nextB;
     unsigned int freeBlk[FREEBNUM];
 };

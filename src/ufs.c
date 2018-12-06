@@ -39,20 +39,20 @@ static int _init(char *path)
     // 写数据区磁盘块数组
     unsigned int i, j = 0;
     unsigned int fBlk[FREEBNUM];
-    for (i = DATABGN + FREEBNUM - 1; i < UFSSIZE / BLKSIZE; i = i + FREEBNUM) {
-        for (int j = 0; j < (FREEBNUM - 1); j++)
-            fBlk[j] = i - (FREEBNUM - 1) + j;
-        fBlk[FREEBNUM - 1] = i + FREEBNUM;
+    for (i = DATABGN; i < UFSSIZE / BLKSIZE; i = i + FREEBNUM) {
+        for (int j = 0; j < FREEBNUM; j++)
+            fBlk[j] = i + j +1;
+		// 最后一组空闲块只有254块，因为超级块用去两块
+		if (i == UFSSIZE / BLKSIZE - FREEBNUM + 2)fBlk[FREEBNUM - 1] = fBlk[FREEBNUM - 2] = 0;
         if (fseek(ufsFp, i * BLKSIZE, SEEK_SET) < 0) return FSERR;
         if (fwrite(fBlk, sizeof(fBlk), 1, ufsFp) != 1) return FWERR;
     }
-    super.blkNum -= FREEBNUM;
     if (fseek(ufsFp, (DATABGN + FREEBNUM - 1) * BLKSIZE, SEEK_SET) < 0)
         return FSERR;
     if (fread(super.freeBlk, sizeof(super.freeBlk), 1, ufsFp) != 1)
         return FRERR;
-    super.curBlk = DATABGN + FREEBNUM - 1;
-    super.nextB = 0;
+	super.freeBlk[FREEBNUM - 1] = DATABGN;
+    super.nextB = FREEBNUM - 1;
 
     // 写索引节点列表区磁盘数组
     unsigned char zeros[4096] = {0};
