@@ -101,6 +101,7 @@ int CreatFile(char *path) {
 			i->blkAddr[i->fSize / BLKSIZE] = blkNbr0;
 		}
 	}
+
 	// 写回索引节点
 	memset(&newI, 0, sizeof(newI));
 	newI.type = FILETYPE; newI.fSize = 0; newI.lNum = 1;

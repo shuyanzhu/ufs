@@ -62,7 +62,7 @@ static int _init(char *path)
     struct DInode rootI; // 磁盘索引节点的根节点
     rootI.type = 1;
     rootI.fSize = 0;
-    rootI.lNum = 15;
+    rootI.lNum = 1;
     memset(&rootI.blkAddr, 0, sizeof(rootI.blkAddr));
     if (fseek(ufsFp, ITABLEBGN * BLKSIZE + sizeof(struct DInode), SEEK_SET) < 0)
         return FSERR;
@@ -127,6 +127,10 @@ int UfsOpen(char *path, int oflag)
 	mInodes[ufd].iNbr = iNum;
     Fseek(ufsFp, ITABLESEEK + iNum * INODESIZE, SEEK_SET);
     Fread(Dp, sizeof(struct DInode), 1, ufsFp);
+
+	//////////////////////////
+	Fseek(ufsFp, 0, SEEK_SET);
+	Fwrite(&super, sizeof(super), 1, ufsFp);
     return ufd;
 }
 

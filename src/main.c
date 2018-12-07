@@ -13,9 +13,16 @@ int main()
 {
 	printf("%d\n", -1 / 1024);
     UfsInit("ufs");
-
+	char s[100] = { 0 };
+	int fd[100];
     int fd1 = UfsOpen("/", 0);
-    int fd2 = UfsOpen("/abc", 16);
-    printf("%d %d\n", fd1, fd2);
+	int fd2= UfsOpen("/abc", 0);
+    int fd3 = UfsOpen("/bbc", 0);
+	for (int i = 0; i < 100; i++) {
+		sprintf(s, "/ab%03d", i);
+		fd[i] = UfsOpen(s, 0);
+		printf("%d\n", fd[i]);
+	}
+    printf("%d %d %d\n", fd1, fd2, fd3);
     return 0;
 }
