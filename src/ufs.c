@@ -63,7 +63,7 @@ static int _init(char *path)
     rootI.type = 1;
     rootI.fSize = 0;
     rootI.lNum = 15;
-    memset(&rootI.blkAddr[0], 0, BLKADDR);
+    memset(&rootI.blkAddr, 0, sizeof(rootI.blkAddr));
     if (fseek(ufsFp, ITABLEBGN * BLKSIZE + sizeof(struct DInode), SEEK_SET) < 0)
         return FSERR;
     if (fwrite(&rootI, sizeof(struct DInode), 1, ufsFp) != 1) return FWERR;
@@ -123,6 +123,8 @@ int UfsOpen(char *path, int oflag)
 
     struct DInode *Dp = malloc(sizeof(struct DInode));
     mInodes[ufd].Dp = Dp;
+	mInodes[ufd].oflag = oflag && 4;
+	mInodes[ufd].iNbr = iNum;
     Fseek(ufsFp, ITABLESEEK + iNum * INODESIZE, SEEK_SET);
     Fread(Dp, sizeof(struct DInode), 1, ufsFp);
     return ufd;

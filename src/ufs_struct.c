@@ -55,11 +55,13 @@ int AllocI() {
 			nextDI++;
 		}
 	}
-	super.nextN = (super.nextN + 1) / FREEINUM;
+	super.nextN = (super.nextN + 1) % FREEINUM;
 	super.inodeNum--;
 	return ret;
 }
 int FreeI(int iNbr) {
+	struct DInode dI;
+	memset(&dI, 0, sizeof(dI));
 	if (super.nextN == 0) {
 		if (iNbr < super.freeInode[FREEINUM - 1])
 			super.freeInode[FREEINUM - 1] = iNbr;
@@ -67,8 +69,9 @@ int FreeI(int iNbr) {
 	else 
 		super.freeInode[--super.nextN] = iNbr;
 	super.inodeNum++;
-	Fseek(ufsFp, ITABLESEEK + INODESIZE * iNbr)
-	
+	Fseek(ufsFp, ITABLESEEK + INODESIZE * iNbr, SEEK_SET);
+	Fwrite(&dI, sizeof(dI), 1, ufsFp);
+	return iNbr;
 }
 int CreatFile(char *path) {
 	int blkNbr0 = 0, blkNbr1 = 0, blkNbr2 = 0, blkNbr3 = 0; // 将要分配的三级磁盘块，以便出错时释放
@@ -81,8 +84,8 @@ int CreatFile(char *path) {
 	if (strcpy(dirent.name, path) == NULL)return BADFILENAME;
 
 	// 根据根节点有没有被打开确定指针i
-	if ((ufd = FindOpenedI(1)) < 0) i = mInodes[ufd].Dp;
-	else {	// 如果根节点没有被打开而缓存
+	if ((ufd = FindOpenedI(1)) != -1) i = mInodes[ufd].Dp;
+	else {	// 如果根节点没有打开而缓存
 		i = &rootI;
 		Fseek(ufsFp, ROOTISEEK, SEEK_SET);
 		Fread(i, sizeof(rootI), 1, ufsFp);
@@ -109,6 +112,7 @@ int CreatFile(char *path) {
 	i->fSize += sizeof(dirent);
 	Fwrite(i, sizeof(struct DInode), 1, ufsFp);
 	// 写目录项，文件大小已经增大，所以要降低偏移量
+	dirent.iNbr = iNbr;
 	Fseek(ufsFp, BMap(i->fSize / BLKSIZE, *i) * BLKSIZE + i->fSize%BLKSIZE-sizeof(dirent), SEEK_SET);
 	Fwrite(&dirent, sizeof(dirent), 1, ufsFp);
 	return iNbr;
@@ -158,16 +162,18 @@ int NameI(unsigned int *iNum, char *path, int oflag)
     Fseek(ufsFp, ROOTISEEK, SEEK_SET);
     Fread(&rootI, sizeof(struct DInode), 1, ufsFp);
     Assert(rootI.type & 1);
-    if (path[1] == 0)
-        return 1;
+	if (path[1] == 0) {
+		*iNum = 1;
+		return 1;
+	}
     else { // 打开的文件不是根目录
         path = path + 1;
-        if (rootI.fSize == 0) return -1;
-        unsigned bAddr = (rootI.fSize - 1) / BLKSIZE + 1;
+		if (rootI.fSize == 0)goto _fsize_0;
+        int bAddr = (rootI.fSize - 1) / BLKSIZE + 1;
         struct Dir dirs[RDDIRNUM];
         unsigned int i = 0;
         for (i = 0; i < bAddr; i++) {
-            Fseek(ufsFp, BMap(i, rootI), SEEK_SET);
+            Fseek(ufsFp, BMap(i, rootI)*BLKSIZE, SEEK_SET);
             ///////////////////////////////
             Assert(sizeof(dirs) == BLKSIZE);
             ///////////////////////////////
@@ -177,11 +183,18 @@ int NameI(unsigned int *iNum, char *path, int oflag)
                  (i * BLKSIZE + j * sizeof(struct Dir) < rootI.fSize) &&
                  (j < RDDIRNUM);
                  j++)
-                if (strcmp(path, (char *) &dirs[j]) == 0) return dirs[j].iNbr;
+				if (strcmp(path, (char *)&dirs[j]) == 0) {
+					*iNum = dirs[j].iNbr;
+					return 1;
+				}
         } // 循环结束，未能找到和path相匹配的目录项
 		
 		// 创文件，分配新的索引节点
-		if (oflag && CREAT)return CreatFile(path);
+	_fsize_0:
+		if (oflag && CREAT) {
+			*iNum = CreatFile(path);
+			return 1;
+		}
 		
 		// 非创文件
         return -1;

@@ -11,9 +11,11 @@
 
 int main()
 {
+	printf("%d\n", -1 / 1024);
     UfsInit("ufs");
+
     int fd1 = UfsOpen("/", 0);
-    int fd2 = UfsOpen("/abc", 0);
+    int fd2 = UfsOpen("/abc", 16);
     printf("%d %d\n", fd1, fd2);
     return 0;
 }
