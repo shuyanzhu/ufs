@@ -13,6 +13,9 @@
 #define FSERR -2
 #define FWERR -3
 #define FCERR -4
+#define NOMOREBLK -5
+#define NOMOREINODE -6
+#define BADFILENAME -7
 // 磁盘大小宏
 #define BLKSIZE (1u << 10)
 #define BLKSOFSU 2u
@@ -30,10 +33,18 @@
 #define MINODES 1024 // 索引节点表大小
 #define ROOTISEEK (ITABLEBGN * BLKSIZE + INODESIZE)
 #define ITABLESEEK (ITABLEBGN * BLKSIZE)
+#define ROOTISEEK (ITABLESEEK + INODESIZE)
+// 文件创建宏
+#define TRUNC (1u << 3)
+#define CREAT (1u << 4)
+#define DIRTYPE 1
+#define FILETYPE 2
 
 //
-typedef long long int64;
 #define RDDIRNUM (BLKSIZE/sizeof(struct Dir))
+//
+typedef long long int64;
+
 // 超级块数据结构
 struct SuperBlk
 {
@@ -75,5 +86,5 @@ struct MInode
 };
 int FindNextMInode(unsigned int iNbr);
 int NameI(unsigned int *iNum, char *path, int oflag);
-long _bmap(int64 pos, struct DInode i);
+long BMap(int64 pos, struct DInode i);
 #endif
