@@ -31,7 +31,6 @@
 #define INODESIZE (1u << 6)
 #define BLKADDR 13   // 索引节点中直接块和间接快的数目
 #define MINODES 1024 // 索引节点表大小
-#define ROOTISEEK (ITABLEBGN * BLKSIZE + INODESIZE)
 #define ITABLESEEK (ITABLEBGN * BLKSIZE)
 #define ROOTISEEK (ITABLESEEK + INODESIZE)
 // 文件创建宏
@@ -41,7 +40,7 @@
 #define FILETYPE 2
 
 //
-#define RDDIRNUM (BLKSIZE/sizeof(struct Dir))
+#define RDDIRNUM (BLKSIZE / sizeof(struct Dir))
 //
 typedef long long int64;
 
@@ -94,7 +93,7 @@ int FreeI(int iNbr);
 // 将文件名转为索引节点号
 int NameI(unsigned int *iNum, char *path, int oflag);
 // 将逻辑块号偏移量转换为磁盘块号
-int BMap(int64 pos, struct DInode i);
+int BMap(int pos, struct DInode i);
 
 // 在已经打开的文件中找
 int FindOpenedI(unsigned int iNbr);
