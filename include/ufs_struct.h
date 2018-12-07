@@ -84,7 +84,20 @@ struct MInode
     unsigned int pos;    // 文件偏移量
     unsigned int pading; // 以备扩展
 };
-int FindNextMInode(unsigned int iNbr);
+// 创建文件、解除文件，分配/释放磁盘块和索引节点等
+int CreatFile(char *path);
+int AllocBlk();
+int FreeBlk(int blkNbr);
+int AllocI();
+int FreeI(int iNbr);
+
+// 将文件名转为索引节点号
 int NameI(unsigned int *iNum, char *path, int oflag);
-long BMap(int64 pos, struct DInode i);
+// 将逻辑块号偏移量转换为磁盘块号
+int BMap(int64 pos, struct DInode i);
+
+// 在已经打开的文件中找
+int FindOpenedI(unsigned int iNbr);
+// 获得文件描述符
+int FindNextMInode(unsigned int iNbr);
 #endif
