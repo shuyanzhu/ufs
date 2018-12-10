@@ -24,5 +24,7 @@ int main()
         printf("%d\n", fd[i]);
     }
     printf("%d %d %d\n", fd1, fd2, fd3);
+
+	UfsClose(-1);
     return 0;
 }

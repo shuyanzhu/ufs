@@ -16,67 +16,7 @@ extern struct SuperBlk super;
 extern struct MInode mInodes[MINODES];
 extern FILE *ufsFp;
 extern int maxUfd;
-
-// 初始化磁盘块
-static int _init(char *path)
-{
-    ufsFp = fopen(path, "wb+");
-    setbuf(ufsFp, NULL);
-    // 初始化磁盘大小
-    if (fseek(ufsFp, UFSSIZE - 1, SEEK_SET) < 0) return FSERR;
-    unsigned char c = 0;
-    if (fwrite(&c, 1, 1, ufsFp) != 1) return FWERR;
-    if (fseek(ufsFp, 0, SEEK_SET) < 0) return FSERR;
-
-    // 初始化超级快
-    memset(&super, 0, sizeof(super));
-    super.magic = UFSMAGIC;
-    super.diskSize = UFSSIZE;
-    super.inodeNum = 1u << (24 - 6);
-    super.blkNum = UFSSIZE / BLKSIZE - DATABGN;
-    super.dirty = 0;
-
-    // 写数据区磁盘块数组
-    unsigned int i, j = 0;
-    unsigned int fBlk[FREEBNUM];
-    for (i = DATABGN; i < UFSSIZE / BLKSIZE; i = i + FREEBNUM) {
-        for (int j = 0; j < FREEBNUM; j++)
-            fBlk[j] = i + j +1;
-		// 最后一组空闲块只有254块，因为超级块用去两块
-		if (i == UFSSIZE / BLKSIZE - FREEBNUM + 2)fBlk[FREEBNUM - 1] = fBlk[FREEBNUM - 2] = 0;
-        if (fseek(ufsFp, i * BLKSIZE, SEEK_SET) < 0) return FSERR;
-        if (fwrite(fBlk, sizeof(fBlk), 1, ufsFp) != 1) return FWERR;
-    }
-    if (fseek(ufsFp, (DATABGN + FREEBNUM - 1) * BLKSIZE, SEEK_SET) < 0)
-        return FSERR;
-    if (fread(super.freeBlk, sizeof(super.freeBlk), 1, ufsFp) != 1)
-        return FRERR;
-	super.freeBlk[FREEBNUM - 1] = DATABGN;
-    super.nextB = FREEBNUM - 1;
-
-    // 写索引节点列表区磁盘数组
-    unsigned char zeros[4096] = {0};
-    if (fseek(ufsFp, ITABLEBGN * BLKSIZE, SEEK_SET) < 0) return FSERR;
-    for (i = 0; i < BLKSOFIN / 4; i++)
-        if (fwrite(zeros, sizeof(zeros), 1, ufsFp) != 1) return FWERR;
-    struct DInode rootI; // 磁盘索引节点的根节点
-    rootI.type = 1;
-    rootI.fSize = 0;
-    rootI.lNum = 1;
-    memset(&rootI.blkAddr, 0, sizeof(rootI.blkAddr));
-    if (fseek(ufsFp, ITABLEBGN * BLKSIZE + sizeof(struct DInode), SEEK_SET) < 0)
-        return FSERR;
-    if (fwrite(&rootI, sizeof(struct DInode), 1, ufsFp) != 1) return FWERR;
-    for (i = 0; i < FREEINUM; i++)
-        super.freeInode[i] = i + 2;
-
-    // 写超级块
-    if (fseek(ufsFp, 0, SEEK_SET) < 0) return FSERR;
-    if (fwrite(&super, sizeof(super), 1, ufsFp) != 1) return FSERR;
-
-    return 0;
-}
-
+extern char cachBlk[BLKSIZE];
 int UfsInit(char *path)
 {
     ufsFp = Fopen(path, "ab+");
@@ -93,7 +33,7 @@ int UfsInit(char *path)
     long ufsLength = ftell(ufsFp); // 获取pos有移植性问题，要求x64，long=int64
     if (ufsLength < sizeof(struct SuperBlk)) {
         fclose(ufsFp);
-        if (_init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
+        if (Init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
         printf("文件系统初始化成功\n");
         return 0;
     }
@@ -105,7 +45,7 @@ int UfsInit(char *path)
     if (super.magic != UFSMAGIC) {
         fclose(ufsFp);
         printf("无效的磁盘\n新的磁盘生成中\n");
-        if (_init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
+        if (Init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
         printf("文件系统初始化成功\n");
         return 0;
     }
@@ -116,11 +56,12 @@ int UfsInit(char *path)
 
 int UfsOpen(char *path, int oflag)
 {
-    unsigned int iNum = 0;
+    int iNum = 0;
     if (NameI(&iNum, path, oflag) < 0) return NOTHATFL;
     int ufd = FindNextMInode(iNum);
     if (ufd < 0) return NOMOREFD;
 
+	// 填充索引节点表
     struct DInode *Dp = malloc(sizeof(struct DInode));
     mInodes[ufd].Dp = Dp;
 	mInodes[ufd].oflag = oflag && 4;
@@ -128,11 +69,72 @@ int UfsOpen(char *path, int oflag)
     Fseek(ufsFp, ITABLESEEK + iNum * INODESIZE, SEEK_SET);
     Fread(Dp, sizeof(struct DInode), 1, ufsFp);
 
-	//////////////////////////
-	Fseek(ufsFp, 0, SEEK_SET);
-	Fwrite(&super, sizeof(super), 1, ufsFp);
+	// 如果规定清文件
+	if (oflag && TRUNC) {
+		if (Dp->fSize == 0) return ufd;
+		if (Dp->type == 1)return NEEDCLRDIR;
+		int pos = 0;
+		for (pos = 0; pos < (Dp->fSize - 1) / BLKSIZE; pos++)
+			BFree(pos, Dp);
+	}
+
     return ufd;
 }
 
-int UfsClose(int ufd) {}
+int UfsClose(int ufd) {
+	if (ufd == -1) {
+		Fseek(ufsFp, 0, SEEK_SET);
+		Fwrite(&super, sizeof(super), 1, ufsFp);
+	}
+	else {
+
+	}
+	return 1;
+}
+
+int UfsRead(int ufd, char *buf, int len) {
+	struct MInode *mI = &mInodes[ufd];
+
+	if (mI->pos == mI->Dp->fSize)return 0; // EOF
+	
+	int n = 0;
+	int ipos, bpos;
+	while (n != len) { // 外层循环，读块
+		int i = 0;
+		bpos = mI->pos / BLKSIZE;
+		ipos = mI->pos % BLKSIZE;
+		Bread(bpos, mI->Dp);
+		while (n != len) { // 内层循环，读块内偏移量
+			if (mI->pos + i == mI->Dp->fSize)return n; // 读到文件尾
+			i++;
+			buf[n++] = cachBlk[ipos++];
+			if (ipos == BLKSIZE)break; // 本块结束
+		}
+		mI->pos += i; // 新的文件逻辑偏移量
+	}
+	return n;
+	
+}
+int UfsWrite(int ufd, char *buf, int len){
+	struct MInode *mI = &mInodes[ufd];
+	
+	int n = 0;
+	int ipos, bpos;
+	while (n != len) {
+		int i = 0, nBlk = 0;
+		bpos = mI->pos / BLKSIZE;
+		ipos = mI->pos % BLKSIZE;
+		if (mI->Dp->fSize / BLKSIZE - 1 < bpos) BAlloc(bpos, mI->Dp);
+		Bread(bpos, mI->Dp);
+		while (n != len) {
+			i++;
+			cachBlk[ipos++] = buf[n++];
+			if (ipos == BLKSIZE)break;
+		}
+		mI->pos += i;
+		if (mI->pos > mI->Dp->fSize)mI->Dp->fSize = mI->pos;
+		FSW(cachBlk, sizeof(cachBlk), BMap(bpos, *(mI->Dp)));
+	}
+	return n;
+}
 

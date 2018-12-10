@@ -50,6 +50,17 @@ static inline size_t Fwrite(void *ptr, size_t size, size_t obno, FILE *fp)
     return n;
 }
 
+static inline void FSR(void *ptr, size_t size, long offset) {
+	extern FILE *ufsFp;
+	Fseek(ufsFp, offset, SEEK_SET);
+	Fread(ptr, size, 1, ufsFp);
+}
+static inline void FSW(void *ptr, size_t size, long offset) {
+	extern FILE *ufsFp;
+	Fseek(ufsFp, offset, SEEK_SET);
+	Fwrite(ptr, size, 1, ufsFp);
+}
+
 static inline int Fclose(FILE *fp)
 {
     if (EOF == fclose(fp)) _quit("Fclose failed");

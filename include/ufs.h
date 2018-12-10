@@ -10,13 +10,13 @@
 
 #define UO_RD 0
 #define UO_WR 1
-#define UO_RDWR (1u << 1)
-#define UO_APPEND (1u << 2)
-#define UO_TRUNC (1u << 3)
-#define UO_CREAT (1u << 4)
+#define UO_RDWR (1 << 1)
+#define UO_APPEND (1 << 2)
+#define UO_TRUNC (1 << 3)
+#define UO_CREAT (1 << 4)
 #define NOMOREFD -1
 #define NOTHATFL -2
-
+#define NEEDCLRDIR -3
 /*
 typedef struct
 {
