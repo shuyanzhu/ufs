@@ -17,14 +17,15 @@ int main()
     int fd[100];
     int fd1 = UfsOpen("/", 0);
     int fd2 = UfsOpen("/abc", UO_CREAT);
-    int fd3 = UfsOpen("/bbc", UO_CREAT);
+    int fd3 = UfsOpen("/bbc", 0);
     printf("%d %d %d\n", fd1, fd2, fd3);
 	
-	char buf[11] = { 0 };
+	//char buf[11] = { 0 };
 	//UfsWrite(fd2, buf, sizeof(buf));
 	//UfsClose(fd2);
 	//fd2 = UfsOpen("/abc", UO_CREAT);
-	UfsRead(fd2, buf, sizeof(buf));
+	//UfsRead(fd2, buf, sizeof(buf));
+	//UfsUnlink("/bbc");
 
 	UfsClose(-1);
     return 0;

@@ -24,7 +24,7 @@
 #define DATABGN (BLKSOFSU + BLKSOFIN)
 // 超级块宏
 #define UFSSIZE (1 * 1024 * 1024 * 1024)
-#define UFSMAGIC 19981019
+#define UFSMAGIC 19981018
 #define FREEINUM 249
 #define FREEBNUM 256
 // 索引节点宏

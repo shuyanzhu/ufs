@@ -210,15 +210,17 @@ int FindNextMInode(int iNbr)
 	else
 		return i;
 }
-int FindDirent(char *path, struct DInode *rootI, struct Dir dirs[RDDIRNUM], int *i) {
+int FindDirent(char *path, struct DInode *rootI, struct Dir dirs[RDDIRNUM], int *map) {
 	if (rootI->fSize == 0)return -1;	 // 如果根目录为空	
 	int bAddr = (rootI->fSize - 1) / BLKSIZE + 1;
-	for (*i = 0; *i < bAddr; *i++) {
-		Fseek(ufsFp, BMap(*i, *rootI)*BLKSIZE, SEEK_SET);
-		Fread(dirs, sizeof(dirs), 1, ufsFp);
+	int i = 0;
+	for (i = 0; i < bAddr; i++) {
+		*map = BMap(i, *rootI);
+		if (map <= 0)_quit("Bad BMap");
+		FSR(dirs, sizeof(struct Dir)*RDDIRNUM, (*map) * BLKSIZE);
 		int j = 0;
 		for (int j = 0;
-			(*i * BLKSIZE + j * sizeof(struct Dir) < rootI->fSize) &&
+			(i * BLKSIZE + j * sizeof(struct Dir) < rootI->fSize) &&
 			(j < RDDIRNUM);
 			j++)
 			if (strcmp(path, (char *)&dirs[j]) == 0) return j;
@@ -238,7 +240,7 @@ int NameI(int *iNum, char *path, int oflag)
 	struct DInode rootI;
 	int i = 0;
 	path = path + 1;
-	if ((i = FindOpenedI(1)) > 0)rootI = *(mInodes[i].Dp); // 根目录已经打开
+	if ((i = FindOpenedI(1)) >= 0)rootI = *(mInodes[i].Dp); // 根目录已经打开
 	else { // 根目录未曾打开
 		Fseek(ufsFp, ROOTISEEK, SEEK_SET);
 		Fread(&rootI, sizeof(struct DInode), 1, ufsFp);
@@ -246,8 +248,9 @@ int NameI(int *iNum, char *path, int oflag)
 	}
 
 	struct Dir dirs[RDDIRNUM];
-	int i = 0; // 目录项所在的逻辑块
-	int j = FindDirent(path, &rootI, dirs, &i); // 目录项的块内偏移量
+	memset(dirs, 0, sizeof(dirs));
+	int map = 0; // 目录项所在的物理块号
+	int j = FindDirent(path, &rootI, dirs, &map); // 目录项的块内偏移量
 	if (j >= 0)return dirs[j].iNbr;	
 	  // 创文件，分配新的索引节点
 	if (oflag & CREAT) {

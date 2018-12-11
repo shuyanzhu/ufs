@@ -88,20 +88,22 @@ int UfsOpen(char *path, int oflag)
 
     return ufd;
 }
-int UfsClose(int ufd) {
+int UfsClose(int ufd) { // 成功返回0，失败返回-1
 	if (ufd < -1 || ufd >MINODES - 1)return -1;
-	if (ufd == -1) {
+	if (ufd == -1) { // 关闭所有打开的索引节点，写回超级块
 		int i = 0;
-		for (i = 0; i < maxUfd+1; i++) {
+		for (i = 0; i < maxUfd; i++) {
 			struct MInode *mI = &mInodes[i];
 			if (mI->Dp == NULL)continue;
 			if (mI->Dp->lNum == 0) { // 联结数为0，释放磁盘块
 				_free_file(mI->Dp);
-				memset(mI->Dp, 0, sizeof(struct DInode));
+				FreeI(mI->iNbr);
+				free(mI->Dp);
+				memset(mI, 0, sizeof(struct MInode));
+				continue;
 			}
 			FSW(mI->Dp, sizeof(struct DInode), ITABLESEEK + INODESIZE * mI->iNbr); // 写回索引节点
 			free(mI->Dp);
-			mI->Dp = NULL;
 			memset(mI, 0, sizeof(struct MInode));
 		}
 		Fseek(ufsFp, 0, SEEK_SET);
@@ -112,14 +114,16 @@ int UfsClose(int ufd) {
 		if (mI->Dp == NULL)return -1;
 		if (mI->Dp->lNum == 0) { // 联结数为0，释放磁盘块
 			_free_file(mI->Dp);
-			memset(mI->Dp, 0, sizeof(struct DInode));
+			FreeI(mI->iNbr);
+			free(mI->Dp);
+			memset(mI, 0, sizeof(struct MInode));
+			return 0;
 		}
 		FSW(mI->Dp, sizeof(struct DInode), ITABLESEEK + INODESIZE * mI->iNbr); // 写回索引节点
 		free(mI->Dp);
-		mI->Dp = NULL;
 		memset(mI, 0, sizeof(struct MInode));
 	}
-	return 1;
+	return 0;
 }
 
 int UfsRead(int ufd, char *buf, int len) {
@@ -176,34 +180,48 @@ int UfsWrite(int ufd, char *buf, int len){
 }
 
 int UfsUnlink(char *path) {
-	int iNbr; int ufd;
-	struct DInode *dI, *rDI;
+	if (path[0] != '/')return -1;
+	if (path[1] == 0)return -1;
+	path = path + 1;
 
-	// 对根索引节点测操作
+	int iNbr, ufd;
+	
+	// 释放目录项
+	struct DInode *rDI;
 	if (ufd = FindOpenedI(1) < 0) {
 		rDI = (struct DInode *)malloc(sizeof(struct DInode));
 		FSR(rDI, sizeof(struct DInode), ROOTISEEK);
 	}
 	else
 		rDI = mInodes[ufd].Dp;
-	int i, j;
-	struct Dir dirs[RDDIRNUM], edir;
-	if ((j = FindDirent(path, rDI, dirs, &i)) < 0)return 0;
+	int map, j;
+	struct Dir dirs[RDDIRNUM];
+	memset(dirs, 0, sizeof(dirs));
+	if ((j = FindDirent(path, rDI, dirs, &map)) < 0)return 0;
 	iNbr = dirs[j].iNbr;
-	int map = BMap(rDI->fSize / BLKSIZE, *rDI);
-	//if(map == 0)
-	FSR(&edir, sizeof(edir), map*BLKSIZE + rDI->fSize%BLKSIZE - sizeof(edir));
-	dirs[j] = edir;
-	FSW(dirs, sizeof(dirs), BMap())
+	// 最后一个目录项
+	struct Dir edir; 
+	int rootEnd = BMap(rDI->fSize / BLKSIZE, *rDI)*BLKSIZE + rDI->fSize%BLKSIZE;
+	FSR(&edir, sizeof(edir), rootEnd - sizeof(edir));
+	// 把最后一个目录项放到被释放的目录项中
+	dirs[j] = edir; 
+	FSW(dirs, sizeof(dirs), map * BLKSIZE);
+	// 如果当前目录项释放后可以释放某一块
+	if (rDI->fSize % BLKSIZE == sizeof(struct Dir))BFree(rDI->fSize / BLKSIZE, rDI);
+	rDI->fSize -= sizeof(struct Dir);
 
+	// 对该文件的索引节点进行操作
+	struct DInode *dI;
+	if ((ufd = FindOpenedI(iNbr)) < 0) { // 如果文件未曾打开
 
-
-	if ((ufd = FindOpenedI(iNbr)) < 0) {
 		dI = (struct DInode *)malloc(sizeof(struct DInode));
 		FSR(dI, sizeof(struct DInode), ITABLESEEK + iNbr * INODESIZE);
+		if (--dI->lNum)return 0;
+		_free_file(dI);
+		FreeI(iNbr);
+		free(dI); dI = NULL;
 	}
-	else {
-
+	else { // 简单将已经打开的索引节点降低联结数
 		dI = mInodes[ufd].Dp;
 		dI->lNum--;
 	}
