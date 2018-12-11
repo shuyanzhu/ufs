@@ -154,7 +154,7 @@ int CreatFile(char *path) {
 	// 分配索引节点
 	if ((iNbr = AllocI()) < 0)return NOMOREINODE;
 	// 分配磁盘块
-	if (i->fSize%BLKSIZE == 0) {
+	if (i->fSize % BLKSIZE == 0) {
 		if (i->fSize < 10 * BLKSIZE) { // 暂时只写这种情况
 			blkNbr0 = AllocBlk();
 			if (blkNbr0 < 0)goto _no_more_blk;
@@ -168,14 +168,15 @@ int CreatFile(char *path) {
 	Fseek(ufsFp, ITABLESEEK + INODESIZE * iNbr, SEEK_SET);
 	Fwrite(&newI, sizeof(newI), 1, ufsFp);
 
+	// 写目录项，文件大小已经增大，所以要降低偏移量
+	dirent.iNbr = iNbr;
+	Fseek(ufsFp, BMap(i->fSize / BLKSIZE, *i) * BLKSIZE + i->fSize % BLKSIZE, SEEK_SET);
+	Fwrite(&dirent, sizeof(dirent), 1, ufsFp);
+
 	// 写根索引节点，用来之后的
 	Fseek(ufsFp, ROOTISEEK, SEEK_SET);
 	i->fSize += sizeof(dirent);
 	Fwrite(i, sizeof(struct DInode), 1, ufsFp);
-	// 写目录项，文件大小已经增大，所以要降低偏移量
-	dirent.iNbr = iNbr;
-	Fseek(ufsFp, BMap(i->fSize / BLKSIZE, *i) * BLKSIZE + i->fSize%BLKSIZE-sizeof(dirent), SEEK_SET);
-	Fwrite(&dirent, sizeof(dirent), 1, ufsFp);
 	return iNbr;
 
 _no_more_inode:
@@ -266,7 +267,7 @@ int NameI(int *iNum, char *path, int oflag)
 int BMap(int pos, struct DInode i)
 {
 	int blk[BLKSIZE / 4];
-	if ((i.fSize - 1) / BLKSIZE < pos)return -1;
+	if (i.fSize / BLKSIZE < pos)return -1;
 
 	// 分别为直接块、一级间接块、二级间接块、三级间接块对应的情况
 	if (pos < 10)
