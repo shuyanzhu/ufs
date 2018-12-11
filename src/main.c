@@ -15,7 +15,7 @@ int main()
     UfsInit("ufs");
     char s[100] = {0};
     int fd[100];
-    int fd1 = UfsOpen("/", 0);
+	int fd1 = DirOpen();
     int fd2 = UfsOpen("/abc", UO_CREAT);
     int fd3 = UfsOpen("/bbc", 0);
     printf("%d %d %d\n", fd1, fd2, fd3);
@@ -26,7 +26,14 @@ int main()
 	//fd2 = UfsOpen("/abc", UO_CREAT);
 	//UfsRead(fd2, buf, sizeof(buf));
 	//UfsUnlink("/bbc");
+	struct Dirent *dirent = DirRead(fd1);
+	printf("the entrys of /\n");
+	while (dirent != NULL) {
+		printf("%s\n", dirent->name);
+		dirent = DirRead(fd1);
+	}
 
+	
 	UfsClose(-1);
     return 0;
 }

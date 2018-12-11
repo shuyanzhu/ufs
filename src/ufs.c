@@ -126,7 +126,8 @@ int UfsClose(int ufd) { // 成功返回0，失败返回-1
 	return 0;
 }
 
-int UfsRead(int ufd, char *buf, int len) {
+int UfsRead(int ufd, void *buff, int len) {
+	char *buf = (char *)buff;
 	struct MInode *mI = &mInodes[ufd];
 
 	if (mI->Dp == NULL)return BADUFD; // 没有打开的文件描述符
@@ -150,7 +151,8 @@ int UfsRead(int ufd, char *buf, int len) {
 	return n;
 	
 }
-int UfsWrite(int ufd, char *buf, int len){
+int UfsWrite(int ufd, void *buff, int len){
+	char *buf = (char *)buff;
 	struct MInode *mI = &mInodes[ufd];
 	
 	if (mI->Dp == NULL)return BADUFD; // 没有打开的文件描述符
@@ -228,3 +230,14 @@ int UfsUnlink(char *path) {
 	return 0;
 }
 
+int DirOpen() {
+	return UfsOpen("/", 0);
+}
+struct Dirent *DirRead(int ufd) {
+	struct Dirent *dirent = (struct dirent *)malloc(sizeof(struct Dirent));
+	struct Dir dir;
+
+	if (0 == UfsRead(ufd, &dir, sizeof(struct Dir)))return NULL;
+	memcpy(dirent->name, dir.name, sizeof(dirent->name));
+	return dirent;
+}

@@ -19,19 +19,18 @@
 #define NEEDCLRDIR -3
 #define BADUFD -4
 #define NOMOREBLKS -5
-/*
-typedef struct
-{
-}*/
 
+struct Dirent {
+	char name[28];
+};
 // 初始化文件系统
 int UfsInit(char *path);
 int UfsOpen(char *path, int oflag);
 int UfsClose(int ufd);
-int UfsRead(int ufd, char *buf, int len);
-int UfsWrite(int ufd, char *buf, int len);
+int UfsRead(int ufd, void *buff, int len);
+int UfsWrite(int ufd, void *buff, int len);
 int UfsUnlink(char *path);
-// DIR *DirOpen(char *pathname);
-// struct dirent *DirRead(DIR *dp);
+int DirOpen();
+struct Dirent *DirRead(int ufd);
 
 #endif
