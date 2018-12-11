@@ -18,12 +18,13 @@ int main()
     int fd1 = UfsOpen("/", 0);
     int fd2 = UfsOpen("/abc", UO_CREAT);
     int fd3 = UfsOpen("/bbc", UO_CREAT);
-    for (int i = 0; i < 100; i++) {
-        sprintf(s, "/ab%03d", i);
-        fd[i] = UfsOpen(s, UO_CREAT);
-        printf("%d\n", fd[i]);
-    }
     printf("%d %d %d\n", fd1, fd2, fd3);
+	
+	char buf[11] = { 0 };
+	//UfsWrite(fd2, buf, sizeof(buf));
+	//UfsClose(fd2);
+	//fd2 = UfsOpen("/abc", UO_CREAT);
+	UfsRead(fd2, buf, sizeof(buf));
 
 	UfsClose(-1);
     return 0;

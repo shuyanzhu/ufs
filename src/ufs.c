@@ -17,6 +17,16 @@ extern struct MInode mInodes[MINODES];
 extern FILE *ufsFp;
 extern int maxUfd;
 extern char cachBlk[BLKSIZE];
+extern char zeros[BLKSIZE];
+
+static inline void _free_file(struct DInode *dI) {
+	int pos = 0;
+	for (pos = 0; pos < (dI->fSize - 1) / BLKSIZE; pos++)
+		BFree(pos, dI);
+	dI->fSize = 0;
+	return;
+}
+
 int UfsInit(char *path)
 {
     ufsFp = Fopen(path, "ab+");
@@ -70,24 +80,44 @@ int UfsOpen(char *path, int oflag)
     Fread(Dp, sizeof(struct DInode), 1, ufsFp);
 
 	// 如果规定清文件
-	if (oflag && TRUNC) {
+	if (oflag & UO_TRUNC) {
 		if (Dp->fSize == 0) return ufd;
 		if (Dp->type == 1)return NEEDCLRDIR;
-		int pos = 0;
-		for (pos = 0; pos < (Dp->fSize - 1) / BLKSIZE; pos++)
-			BFree(pos, Dp);
+		_free_file(Dp);
 	}
 
     return ufd;
 }
-
 int UfsClose(int ufd) {
+	if (ufd < -1 || ufd >MINODES - 1)return -1;
 	if (ufd == -1) {
+		int i = 0;
+		for (i = 0; i < maxUfd+1; i++) {
+			struct MInode *mI = &mInodes[i];
+			if (mI->Dp == NULL)continue;
+			if (mI->Dp->lNum == 0) { // 联结数为0，释放磁盘块
+				_free_file(mI->Dp);
+				memset(mI->Dp, 0, sizeof(struct DInode));
+			}
+			FSW(mI->Dp, sizeof(struct DInode), ITABLESEEK + INODESIZE * mI->iNbr); // 写回索引节点
+			free(mI->Dp);
+			mI->Dp = NULL;
+			memset(mI, 0, sizeof(struct MInode));
+		}
 		Fseek(ufsFp, 0, SEEK_SET);
 		Fwrite(&super, sizeof(super), 1, ufsFp);
 	}
-	else {
-
+	else { 
+		struct MInode *mI = &mInodes[ufd];
+		if (mI->Dp == NULL)return -1;
+		if (mI->Dp->lNum == 0) { // 联结数为0，释放磁盘块
+			_free_file(mI->Dp);
+			memset(mI->Dp, 0, sizeof(struct DInode));
+		}
+		FSW(mI->Dp, sizeof(struct DInode), ITABLESEEK + INODESIZE * mI->iNbr); // 写回索引节点
+		free(mI->Dp);
+		mI->Dp = NULL;
+		memset(mI, 0, sizeof(struct MInode));
 	}
 	return 1;
 }
@@ -95,6 +125,7 @@ int UfsClose(int ufd) {
 int UfsRead(int ufd, char *buf, int len) {
 	struct MInode *mI = &mInodes[ufd];
 
+	if (mI->Dp == NULL)return BADUFD; // 没有打开的文件描述符
 	if (mI->pos == mI->Dp->fSize)return 0; // EOF
 	
 	int n = 0;
@@ -103,7 +134,7 @@ int UfsRead(int ufd, char *buf, int len) {
 		int i = 0;
 		bpos = mI->pos / BLKSIZE;
 		ipos = mI->pos % BLKSIZE;
-		Bread(bpos, mI->Dp);
+		BRead(bpos, mI->Dp);
 		while (n != len) { // 内层循环，读块内偏移量
 			if (mI->pos + i == mI->Dp->fSize)return n; // 读到文件尾
 			i++;
@@ -118,14 +149,17 @@ int UfsRead(int ufd, char *buf, int len) {
 int UfsWrite(int ufd, char *buf, int len){
 	struct MInode *mI = &mInodes[ufd];
 	
+	if (mI->Dp == NULL)return BADUFD; // 没有打开的文件描述符
+
 	int n = 0;
 	int ipos, bpos;
-	while (n != len) {
+   	while (n != len) {
 		int i = 0, nBlk = 0;
 		bpos = mI->pos / BLKSIZE;
 		ipos = mI->pos % BLKSIZE;
-		if (mI->Dp->fSize / BLKSIZE - 1 < bpos) BAlloc(bpos, mI->Dp);
-		Bread(bpos, mI->Dp);
+		if (mI->Dp->fSize / BLKSIZE - 1 < bpos)
+			if (BAlloc(bpos, mI->Dp) < 0)return NOMOREBLKS;
+		BRead(bpos, mI->Dp);
 		while (n != len) {
 			i++;
 			cachBlk[ipos++] = buf[n++];
@@ -133,8 +167,46 @@ int UfsWrite(int ufd, char *buf, int len){
 		}
 		mI->pos += i;
 		if (mI->pos > mI->Dp->fSize)mI->Dp->fSize = mI->pos;
-		FSW(cachBlk, sizeof(cachBlk), BMap(bpos, *(mI->Dp)));
+		int map = BMap(bpos, *(mI->Dp));
+		if (map == 0)
+			if((map = BAlloc(bpos, mI->Dp)) < 0)return NOMOREBLKS;
+		FSW(cachBlk, sizeof(cachBlk), map*BLKSIZE);
 	}
 	return n;
+}
+
+int UfsUnlink(char *path) {
+	int iNbr; int ufd;
+	struct DInode *dI, *rDI;
+
+	// 对根索引节点测操作
+	if (ufd = FindOpenedI(1) < 0) {
+		rDI = (struct DInode *)malloc(sizeof(struct DInode));
+		FSR(rDI, sizeof(struct DInode), ROOTISEEK);
+	}
+	else
+		rDI = mInodes[ufd].Dp;
+	int i, j;
+	struct Dir dirs[RDDIRNUM], edir;
+	if ((j = FindDirent(path, rDI, dirs, &i)) < 0)return 0;
+	iNbr = dirs[j].iNbr;
+	int map = BMap(rDI->fSize / BLKSIZE, *rDI);
+	//if(map == 0)
+	FSR(&edir, sizeof(edir), map*BLKSIZE + rDI->fSize%BLKSIZE - sizeof(edir));
+	dirs[j] = edir;
+	FSW(dirs, sizeof(dirs), BMap())
+
+
+
+	if ((ufd = FindOpenedI(iNbr)) < 0) {
+		dI = (struct DInode *)malloc(sizeof(struct DInode));
+		FSR(dI, sizeof(struct DInode), ITABLESEEK + iNbr * INODESIZE);
+	}
+	else {
+
+		dI = mInodes[ufd].Dp;
+		dI->lNum--;
+	}
+	return 0;
 }
 

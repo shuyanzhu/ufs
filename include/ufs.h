@@ -17,6 +17,8 @@
 #define NOMOREFD -1
 #define NOTHATFL -2
 #define NEEDCLRDIR -3
+#define BADUFD -4
+#define NOMOREBLKS -5
 /*
 typedef struct
 {
