@@ -14,10 +14,10 @@ int main()
     UfsInit("ufs");
     char s[100] = {0};
 
-    int fd = UfsOpen("/cbc", 0);
-	int fd1 = UfsOpen("/zhushuyan", UO_CREAT);
+    int fd = UfsOpen("/cbc", UO_CREAT);
+	int fd1 = UfsOpen("/mingming", UO_CREAT);
     //char buf[] = "kurekb";
-    // UfsWrite(fd, buf, sizeof(buf));
+    //UfsWrite(fd, buf, sizeof(buf));
 
     char buff[7] = {0};
 	if (0 == UfsRead(fd, buff, sizeof(buff)))
@@ -28,7 +28,9 @@ int main()
 	struct Dirent *dirent = DirRead(rfd);
 	while (dirent != NULL) {
 		printf("%s\n", dirent->name);
+		free(dirent);
 		dirent = DirRead(rfd);
 	}
+	UfsClose(-1);
     return 0;
 }

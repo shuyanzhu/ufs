@@ -14,11 +14,13 @@
 #define UO_APPEND (1 << 2)
 #define UO_TRUNC (1 << 3)
 #define UO_CREAT (1 << 4)
-#define NOMOREFD -1
+
+#define NOMOREFD -7
 #define NOTHATFL -2
 #define NEEDCLRDIR -3
 #define BADUFD -4
 #define NOMOREBLKS -5
+#define NOTROOT -6
 
 struct Dirent {
 	char name[28];

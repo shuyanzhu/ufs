@@ -75,6 +75,8 @@ int UfsInit(char *path)
 
 int UfsOpen(char *path, int oflag)
 {
+	if (strlen(path) > 28)return -1;
+
     int iNum = 0;
     if (NameI(&iNum, path, oflag) < 0) return NOTHATFL;
     int ufd = FindNextMInode(iNum);
@@ -142,6 +144,7 @@ int UfsClose(int ufd)
 
 int UfsRead(int ufd, void *buff, int len)
 {
+	if (ufd < 0 || ufd > maxUfd)return BADUFD;
     char *buf = (char *) buff;
     struct MInode *mI = &mInodes[ufd];
 
@@ -167,6 +170,7 @@ int UfsRead(int ufd, void *buff, int len)
 }
 int UfsWrite(int ufd, void *buff, int len)
 {
+	if (ufd < 0 || ufd > maxUfd)return BADUFD;
     char *buf = (char *) buff;
     struct MInode *mI = &mInodes[ufd];
 
@@ -178,7 +182,7 @@ int UfsWrite(int ufd, void *buff, int len)
         int i = 0, nBlk = 0;
         bpos = mI->pos / BLKSIZE;
         ipos = mI->pos % BLKSIZE;
-        if (mI->Dp->fSize / BLKSIZE - 1 < bpos)
+        if ((mI->Dp->fSize-1)/ BLKSIZE  < bpos)
             if (BAlloc(bpos, mI->Dp) < 0) return NOMOREBLKS;
         BRead(bpos, mI->Dp);
         while (n != len) {
@@ -250,8 +254,8 @@ int UfsUnlink(char *path)
 int DirOpen() { return UfsOpen("/", 0); }
 struct Dirent *DirRead(int ufd)
 {
-	if (ufd < 0 || ufd > maxUfd)_quit("Bad ufd");
-	if (mInodes[ufd].Dp->type != DIRTYPE)_quit("Not root ufd");
+	if (ufd < 0 || ufd > maxUfd)return BADUFD;
+	if (mInodes[ufd].Dp->type != DIRTYPE)return NOTROOT;
 
     struct Dirent *dirent = (struct Dirent *) malloc(sizeof(struct Dirent));
     struct Dir dir;
