@@ -14,14 +14,21 @@ int main()
     UfsInit("ufs");
     char s[100] = {0};
 
-    int fd = UfsOpen("/cbc", UO_CREAT);
-    //char buf[] = "eureka";
+    int fd = UfsOpen("/cbc", 0);
+	int fd1 = UfsOpen("/zhushuyan", UO_CREAT);
+    //char buf[] = "kurekb";
     // UfsWrite(fd, buf, sizeof(buf));
 
-    char buf[7] = {0};
-    UfsRead(fd, buf, sizeof(buf));
-    printf("buf: %s\n", buf);
+    char buff[7] = {0};
+	if (0 == UfsRead(fd, buff, sizeof(buff)))
+		printf("EOF\n");
+    else printf("buf: %s\n", buff);
 
-    UfsClose(-1);
+	int rfd = DirOpen();
+	struct Dirent *dirent = DirRead(rfd);
+	while (dirent != NULL) {
+		printf("%s\n", dirent->name);
+		dirent = DirRead(rfd);
+	}
     return 0;
 }

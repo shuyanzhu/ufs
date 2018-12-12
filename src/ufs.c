@@ -28,6 +28,11 @@ static inline void _free_file(struct DInode *dI)
     return;
 }
 
+static void _ufs_close() {
+	UfsClose(-1);
+	return;
+}
+
 int UfsInit(char *path)
 {
     ufsFp = Fopen(path, "ab+");
@@ -46,6 +51,7 @@ int UfsInit(char *path)
         fclose(ufsFp);
         if (Init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
         printf("文件系统初始化成功\n");
+		atexit(_ufs_close); // 注册
         return 0;
     }
     if (fseek(ufsFp, 0, SEEK_SET) < 0) _quit("UfsInitL fseek failed");
@@ -58,10 +64,12 @@ int UfsInit(char *path)
         printf("无效的磁盘\n新的磁盘生成中\n");
         if (Init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
         printf("文件系统初始化成功\n");
+		atexit(_ufs_close); // 注册
         return 0;
     }
 
     printf("文件系统初始化成功\n");
+	atexit(_ufs_close); // 注册
     return 0;
 }
 
@@ -112,6 +120,7 @@ int UfsClose(int ufd)
         }
         Fseek(ufsFp, 0, SEEK_SET);
         Fwrite(&super, sizeof(super), 1, ufsFp);
+		fprintf(stderr, "Ufs exit\n");
     } else {
         struct MInode *mI = &mInodes[ufd];
         if (mI->Dp == NULL) return -1;
@@ -241,8 +250,12 @@ int UfsUnlink(char *path)
 int DirOpen() { return UfsOpen("/", 0); }
 struct Dirent *DirRead(int ufd)
 {
+	if (ufd < 0 || ufd > maxUfd)_quit("Bad ufd");
+	if (mInodes[ufd].Dp->type != DIRTYPE)_quit("Not root ufd");
+
     struct Dirent *dirent = (struct Dirent *) malloc(sizeof(struct Dirent));
     struct Dir dir;
+
 
     if (0 == UfsRead(ufd, &dir, sizeof(struct Dir))) return NULL;
     memcpy(dirent->name, dir.name, sizeof(dirent->name));
