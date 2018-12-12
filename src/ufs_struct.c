@@ -252,11 +252,14 @@ int NameI(int *iNum, char *path, int oflag)
 	memset(dirs, 0, sizeof(dirs));
 	int map = 0; // 目录项所在的物理块号
 	int j = FindDirent(path, &rootI, dirs, &map); // 目录项的块内偏移量
-	if (j >= 0)return dirs[j].iNbr;	
+	if (j >= 0) {
+		*iNum = dirs[j].iNbr;
+		return 0;
+	}
 	  // 创文件，分配新的索引节点
 	if (oflag & CREAT) {
 		*iNum = CreatFile(path);
-		return 1;
+		return 0;
 	}
 
 	// 非创文件

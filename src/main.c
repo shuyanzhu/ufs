@@ -15,7 +15,7 @@ int main()
     char s[100] = {0};
 
     int fd = UfsOpen("/cbc", UO_CREAT);
-    // char buf[] = "eureka";
+    //char buf[] = "eureka";
     // UfsWrite(fd, buf, sizeof(buf));
 
     char buf[7] = {0};
