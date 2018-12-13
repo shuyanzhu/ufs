@@ -189,7 +189,7 @@ int UfsWrite(int ufd, void *buff, int len)
         int i = 0, nBlk = 0;
         bpos = mI->pos / BLKSIZE;
         ipos = mI->pos % BLKSIZE;
-        if ((mI->Dp->fSize-1)/ BLKSIZE  < bpos)
+        if ((mI->Dp->fSize-1)/ BLKSIZE  < bpos || mI->Dp->fSize == 0)
             if (BAlloc(bpos, mI->Dp) < 0) return NOMOREBLKS;
         BRead(bpos, mI->Dp);
         while (n != len) {

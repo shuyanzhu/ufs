@@ -13,16 +13,18 @@ int main()
 {
     UfsInit("ufs");
     char s[100] = {0};
+	printf("%d\n", -1 / 1024);
 
-    int fd = UfsOpen("/cbc", UO_CREAT);
+    int fd = UfsOpen("/abbc", UO_APPEND|UO_CREAT);
 	int fd1 = UfsOpen("/mingming", UO_CREAT);
-    //char buf[] = "kurekb";
-    //UfsWrite(fd, buf, sizeof(buf));
 
-    char buff[7] = {0};
+    char buf[] = "kurekb";
+    UfsWrite(fd, buf, sizeof(buf));
+
+    char buff[100] = {0};
 	if (0 == UfsRead(fd, buff, sizeof(buff)))
 		printf("EOF\n");
-    else printf("buf: %s\n", buff);
+	else fwrite(buff, 100, 1, stderr);
 
 	int rfd = DirOpen();
 	struct Dirent *dirent = DirRead(rfd);
