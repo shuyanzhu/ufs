@@ -11,6 +11,7 @@
 #include "../include/ufs_wrap.h"
 #include "../include/ufs_struct.h"
 
+// 初始化
 struct SuperBlk super;
 FILE *ufsFp;
 struct MInode mInodes[MINODES];
@@ -77,7 +78,7 @@ int Init(char *path)
 	return 0;
 }
 
-// 不考虑有文件空洞
+// 物理磁盘块算法
 int AllocBlk(){
 	if (super.blkNum == 0)return -1;
 	int ret = super.freeBlk[super.nextB];
@@ -133,6 +134,7 @@ int FreeI(int iNbr) {
 	Fwrite(&dI, sizeof(dI), 1, ufsFp);
 	return iNbr;
 }
+// 没写完，没有考虑320个以上文件的情况
 int CreatFile(char *path) {
 	int blkNbr0 = 0, blkNbr1 = 0, blkNbr2 = 0, blkNbr3 = 0; // 将要分配的三级磁盘块，以便出错时释放
 	int iNbr, ufd; // 要分配的索引节点
@@ -184,6 +186,143 @@ _no_more_inode:
 _no_more_blk:
 	FreeI(iNbr);
 	return NOMOREBLK;
+}
+
+// 逻辑快算法
+int BMap(int pos, struct DInode i)
+{
+	int blk[BLKSIZE / 4];
+	if (i.fSize / BLKSIZE < pos)return -1;
+
+	// 分别为直接块、一级间接块、二级间接块、三级间接块对应的情况
+	if (pos < 10)
+		return i.blkAddr[pos];
+	else if (pos < 10 + 256) {
+		if (i.blkAddr[10] == 0)return 0; //文件空洞
+
+		Fseek(ufsFp, i.blkAddr[10] * BLKSIZE, SEEK_SET);
+		Fread(blk, sizeof(blk), 1, ufsFp);
+		return blk[pos - 10];
+	}
+	else if (pos < 10 + 256 + 256 * 256) {
+		if (i.blkAddr[11] == 0)return 0;
+
+		Fseek(ufsFp, i.blkAddr[11] * BLKSIZE, SEEK_SET);
+		Fread(blk, sizeof(blk), 1, ufsFp);
+
+		if (blk[(pos - 10 - 256) / 256] == 0)return 0;
+		Fseek(ufsFp, blk[(pos - 10 - 256) / 256], SEEK_SET);
+		Fread(blk, sizeof(blk), 1, ufsFp);
+		return blk[(pos - 10 - 256) % 256];
+	}
+	else {
+		if (i.blkAddr[12] == 0)return 0;
+
+		Fseek(ufsFp, i.blkAddr[12] * BLKSIZE, SEEK_SET);
+		Fread(blk, sizeof(blk), 1, ufsFp);
+
+		if (blk[(pos - 10 - 256 - 256 * 256) / (256 * 256)] == 0)return 0;
+		Fseek(ufsFp, blk[(pos - 10 - 256 - 256 * 256) / (256 * 256)], SEEK_SET);
+		Fread(blk, sizeof(blk), 1, ufsFp);
+
+		if (blk[(pos - 10 - 256 - 256 * 256) % (256 * 256) / 256] == 0)return 0;
+		Fseek(
+			ufsFp,
+			blk[(pos - 10 - 256 - 256 * 256) % (256 * 256) / 256],
+			SEEK_SET);
+		Fread(blk, sizeof(blk), 1, ufsFp);
+		return blk[(pos - 10 - 256 - 256 * 256) % (256 * 256) % 256];
+	}
+}
+int BRead(int pos, struct DInode *inode) {
+	int iNbr = BMap(pos, *inode);
+	if (iNbr == 0) {
+		memset(cachBlk, 0, BLKSIZE);
+		return iNbr;
+	}
+	else
+		FSR(cachBlk, sizeof(cachBlk), iNbr * BLKSIZE);
+	return iNbr;
+}
+// 没写完
+int BAlloc(int pos, struct DInode *inode) {
+
+	// 直接块、一级间接块、二级间接块、三级间接块
+	if (pos < 10) {
+		int iNbr;
+		if ((iNbr = AllocBlk()) < 0)return -1;
+		inode->blkAddr[pos] = iNbr;
+	}
+	else if (pos < 10 + 256) {
+		int blks1[256] = { 0 };
+		if (inode->blkAddr[10] == 0) {
+			int iNbr0;
+			if ((iNbr0 = AllocBlk()) < 0)return -1;
+			inode->blkAddr[10] = iNbr0;
+			FSW(blks1, sizeof(blks1), iNbr0 * BLKSIZE);
+		}
+
+		int iNbr1;
+		if ((iNbr1 = AllocBlk()) < 0)return -1;
+		blks1[pos - 10] = iNbr1;
+		FSW(blks1, sizeof(blks1), inode->blkAddr[10] * BLKSIZE);
+	}
+	else if (pos < 10 + 256 + 256 * 256) { // 太麻烦了，暂时不写
+	}
+	else { // 太麻烦了，暂时不写
+	}
+	return 1;
+}
+// 没写完
+int BFree(int pos, struct DInode *inode) {
+	// 直接块、一级间接块、二级间接块、三级间接块
+	if (pos < 10) {
+		FreeBlk(inode->blkAddr[pos]);
+		inode->blkAddr[pos] = 0;
+	}
+	else if (pos < 10 + 256) {
+		int blks[BLKSIZE / 4] = { 0 };
+		Fseek(ufsFp, inode->blkAddr[10] * BLKSIZE, SEEK_SET);
+		Fread(blks, sizeof(blks), 1, ufsFp);
+		int blkA = blks[pos - 10];
+		FreeBlk(blkA);
+		blks[pos - 10] = 0;
+		Fseek(ufsFp, -BLKSIZE, SEEK_CUR);
+		Fwrite(blks, sizeof(blks), 1, ufsFp);
+
+		// 释放一级块
+		if (pos == 10) { // 情况少见
+			FreeBlk(inode->blkAddr[10]);
+			inode->blkAddr[10] = 0;
+		}
+	}
+	else if (pos < 10 + 256 + 256 * 256) {
+		int blks1[BLKSIZE / 4] = { 0 }, blks2[BLKSIZE / 4] = { 0 };
+		Fseek(ufsFp, inode->blkAddr[11] * BLKSIZE, SEEK_SET);
+		Fread(blks1, sizeof(blks1), 1, ufsFp);
+		Fseek(ufsFp, blks1[(pos - 10 - 256) / 256], SEEK_SET);
+		Fread(blks2, sizeof(blks2), 1, ufsFp);
+
+		FreeBlk(blks2[(pos - 10 - 256) % 256]);
+		blks2[(pos - 10 - 256) % 256] = 0;
+		Fseek(ufsFp, -BLKSIZE, SEEK_CUR);
+		Fwrite(blks2, sizeof(blks2), 1, ufsFp);
+
+		if (pos == 10 + 256) {
+			FreeBlk(blks1[0]);
+			FreeBlk(inode->blkAddr[11]);
+			inode->blkAddr[11] = 0;
+		}
+		else if ((pos - 10 - 256) % 256 == 0) {
+			FreeBlk(blks1[(pos - 10 - 256) / 256]);
+			blks1[(pos - 10 - 256) / 256] = 0;
+			Fseek(ufsFp, inode->blkAddr[11], SEEK_SET);
+			Fwrite(blks1, sizeof(blks1), 1, ufsFp);
+		}
+	}
+	else { // 太麻烦了，暂时不写
+	}
+	return 1;
 }
 
 // 返回文件描述符
@@ -264,139 +403,4 @@ int NameI(int *iNum, char *path, int oflag)
 
 	// 非创文件
 	return -1;
-}
-
-// 底下这几段代码写得贼恶心，如果考虑文件空洞，则会更恶心
-int BMap(int pos, struct DInode i)
-{
-	int blk[BLKSIZE / 4];
-	if (i.fSize / BLKSIZE < pos)return -1;
-
-	// 分别为直接块、一级间接块、二级间接块、三级间接块对应的情况
-	if (pos < 10)
-		return i.blkAddr[pos];
-	else if (pos < 10 + 256) {
-		if (i.blkAddr[10] == 0)return 0; //文件空洞
-
-		Fseek(ufsFp, i.blkAddr[10] * BLKSIZE, SEEK_SET);
-		Fread(blk, sizeof(blk), 1, ufsFp);
-		return blk[pos - 10];
-	}
-	else if (pos < 10 + 256 + 256 * 256) {
-		if (i.blkAddr[11] == 0)return 0;
-
-		Fseek(ufsFp, i.blkAddr[11] * BLKSIZE, SEEK_SET);
-		Fread(blk, sizeof(blk), 1, ufsFp);
-
-		if (blk[(pos - 10 - 256) / 256] == 0)return 0;
-		Fseek(ufsFp, blk[(pos - 10 - 256) / 256], SEEK_SET);
-		Fread(blk, sizeof(blk), 1, ufsFp);
-		return blk[(pos - 10 - 256) % 256];
-	}
-	else {
-		if (i.blkAddr[12] == 0)return 0;
-
-		Fseek(ufsFp, i.blkAddr[12] * BLKSIZE, SEEK_SET);
-		Fread(blk, sizeof(blk), 1, ufsFp);
-
-		if (blk[(pos - 10 - 256 - 256 * 256) / (256 * 256)] == 0)return 0;
-		Fseek(ufsFp, blk[(pos - 10 - 256 - 256 * 256) / (256 * 256)], SEEK_SET);
-		Fread(blk, sizeof(blk), 1, ufsFp);
-
-		if (blk[(pos - 10 - 256 - 256 * 256) % (256 * 256) / 256] == 0)return 0;
-		Fseek(
-			ufsFp,
-			blk[(pos - 10 - 256 - 256 * 256) % (256 * 256) / 256],
-			SEEK_SET);
-		Fread(blk, sizeof(blk), 1, ufsFp);
-		return blk[(pos - 10 - 256 - 256 * 256) % (256 * 256) % 256];
-	}
-}
-int BRead(int pos, struct DInode *inode) {
-	int iNbr = BMap(pos, *inode);
-	if (iNbr == 0) {
-		memset(cachBlk, 0, BLKSIZE);
-		return iNbr;
-	}
-	else
-		FSR(cachBlk, sizeof(cachBlk), iNbr * BLKSIZE);
-	return iNbr;
-}
-int BAlloc(int pos, struct DInode *inode){
-
-	// 直接块、一级间接块、二级间接块、三级间接块
-	if (pos < 10) {
-		int iNbr;
-		if ((iNbr = AllocBlk()) < 0)return -1;
-		inode->blkAddr[pos] = iNbr;
-	}
-	else if (pos < 10 + 256) {
-		int blks1[256] = { 0 };
-		if (inode->blkAddr[10] == 0) {
-			int iNbr0;
-			if((iNbr0 = AllocBlk()) < 0)return -1;
-			inode->blkAddr[10] = iNbr0;
-			FSW(blks1, sizeof(blks1), iNbr0 * BLKSIZE);
-		}
-
-		int iNbr1;
-		if ((iNbr1 = AllocBlk()) < 0)return -1;
-		blks1[pos - 10] = iNbr1;
-		FSW(blks1, sizeof(blks1), inode->blkAddr[10] * BLKSIZE);
-	}
-	else if (pos < 10 + 256 + 256 * 256) { // 太麻烦了，暂时不写
-	}
-	else { // 太麻烦了，暂时不写
-	}
-	return 1;
-}
-int BFree(int pos, struct DInode *inode) {
-	// 直接块、一级间接块、二级间接块、三级间接块
-	if (pos < 10) {
-		FreeBlk(inode->blkAddr[pos]);
-		inode->blkAddr[pos] = 0;
-	}
-	else if (pos < 10 + 256) {
-		int blks[BLKSIZE / 4] = { 0 };
-		Fseek(ufsFp, inode->blkAddr[10] * BLKSIZE, SEEK_SET);
-		Fread(blks, sizeof(blks), 1, ufsFp);
-		int blkA = blks[pos - 10];
-		FreeBlk(blkA);
-		blks[pos - 10] = 0;
-		Fseek(ufsFp, -BLKSIZE, SEEK_CUR);
-		Fwrite(blks, sizeof(blks), 1, ufsFp);
-
-		// 释放一级块
-		if (pos == 10) { // 情况少见
-			FreeBlk(inode->blkAddr[10]);
-			inode->blkAddr[10] = 0;
-		}
-	}
-	else if (pos < 10 + 256 + 256 * 256) {
-		int blks1[BLKSIZE / 4] = { 0 }, blks2[BLKSIZE / 4] = { 0 };
-		Fseek(ufsFp, inode->blkAddr[11] * BLKSIZE, SEEK_SET);
-		Fread(blks1, sizeof(blks1), 1, ufsFp);
-		Fseek(ufsFp, blks1[(pos - 10 - 256) / 256], SEEK_SET);
-		Fread(blks2, sizeof(blks2), 1, ufsFp);
-
-		FreeBlk(blks2[(pos - 10 - 256) % 256]);
-		blks2[(pos - 10 - 256) % 256] = 0;
-		Fseek(ufsFp, -BLKSIZE, SEEK_CUR);
-		Fwrite(blks2, sizeof(blks2), 1, ufsFp);
-
-		if (pos == 10 + 256) {
-			FreeBlk(blks1[0]);
-			FreeBlk(inode->blkAddr[11]);
-			inode->blkAddr[11] = 0;
-		}
-		else if ((pos - 10 - 256) % 256 == 0) {
-			FreeBlk(blks1[(pos - 10 - 256) / 256]);
-			blks1[(pos - 10 - 256) / 256] = 0;
-			Fseek(ufsFp, inode->blkAddr[11], SEEK_SET);
-			Fwrite(blks1, sizeof(blks1), 1, ufsFp);
-		}
-	}
-	else { // 太麻烦了，暂时不写
-	}
-	return 1;
 }

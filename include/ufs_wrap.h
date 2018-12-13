@@ -12,7 +12,7 @@
 
 static inline void _quit(char *buf)
 {
-    fprintf(stderr, "%s\n", buf);
+    fprintf(stderr, "%s ", buf);
     exit(-1);
 }
 

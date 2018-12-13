@@ -76,6 +76,7 @@ int UfsInit(char *path)
 int UfsOpen(char *path, int oflag)
 {
 	if (strlen(path) > 28)return -1;
+	if (oflag & 3 == 3)return BADOFLAG;
 
     int iNum = 0;
     if (NameI(&iNum, path, oflag) < 0) return NOTHATFL;
@@ -85,7 +86,7 @@ int UfsOpen(char *path, int oflag)
     // 填充索引节点表
     struct DInode *Dp = malloc(sizeof(struct DInode));
     mInodes[ufd].Dp = Dp;
-    mInodes[ufd].oflag = oflag && 4;
+    mInodes[ufd].oflag = oflag & (UO_APPEND | UO_RDWR |UO_WR); // 和7位与
     mInodes[ufd].iNbr = iNum;
     Fseek(ufsFp, ITABLESEEK + iNum * INODESIZE, SEEK_SET);
     Fread(Dp, sizeof(struct DInode), 1, ufsFp);
@@ -148,6 +149,8 @@ int UfsRead(int ufd, void *buff, int len)
     char *buf = (char *) buff;
     struct MInode *mI = &mInodes[ufd];
 
+	if (mI->oflag & 3 == UO_WR)return WRONLY;
+
     if (mI->Dp == NULL) return BADUFD;      // 没有打开的文件描述符
     if (mI->pos == mI->Dp->fSize) return 0; // EOF
 
@@ -174,7 +177,11 @@ int UfsWrite(int ufd, void *buff, int len)
     char *buf = (char *) buff;
     struct MInode *mI = &mInodes[ufd];
 
+	if (mI->oflag & 3 == UO_RD)return RDONLY;
+
     if (mI->Dp == NULL) return BADUFD; // 没有打开的文件描述符
+	int append = mI->pos;
+	if (mI->oflag & UO_APPEND)mI->pos = mI->Dp->fSize;
 
     int n = 0;
     int ipos, bpos;
@@ -197,6 +204,7 @@ int UfsWrite(int ufd, void *buff, int len)
             if ((map = BAlloc(bpos, mI->Dp)) < 0) return NOMOREBLKS;
         FSW(cachBlk, sizeof(cachBlk), map * BLKSIZE);
     }
+	if (mI->oflag & UO_APPEND)mI->pos = append; // 如果为追加模式，则恢复原来的文件偏移量
     return n;
 }
 

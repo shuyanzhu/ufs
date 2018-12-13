@@ -21,6 +21,9 @@
 #define BADUFD -4
 #define NOMOREBLKS -5
 #define NOTROOT -6
+#define WRONLY -8
+#define RDONLY -9
+#define BADOFLAG -19
 
 struct Dirent {
 	char name[28];
