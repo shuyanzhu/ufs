@@ -6,6 +6,7 @@
 ************************************************************************/
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "../include/ufs.h"
 
@@ -13,26 +14,27 @@ int main()
 {
     UfsInit("ufs");
     char s[100] = {0};
-	printf("%d\n", -1 / 1024);
+    printf("%d\n", -1 / 1024);
 
-    int fd = UfsOpen("/abbc", UO_APPEND|UO_CREAT);
-	int fd1 = UfsOpen("/mingming", UO_CREAT);
+    int fd = UfsOpen("/abbc", UO_CREAT);
+    int fd1 = UfsOpen("/mingming", UO_CREAT);
 
-    char buf[] = "kurekb";
-    UfsWrite(fd, buf, sizeof(buf));
+    // char buf[] = "1234576970757665324345657568968987566";
+    // UfsWrite(fd, buf, sizeof(buf));
 
     char buff[100] = {0};
-	if (0 == UfsRead(fd, buff, sizeof(buff)))
-		printf("EOF\n");
-	else fwrite(buff, 100, 1, stderr);
+    if (0 == UfsRead(fd, buff, sizeof(buff)))
+        printf("EOF\n");
+    else
+        fwrite(buff, 100, 1, stderr);
 
-	int rfd = DirOpen();
-	struct Dirent *dirent = DirRead(rfd);
-	while (dirent != NULL) {
-		printf("%s\n", dirent->name);
-		free(dirent);
-		dirent = DirRead(rfd);
-	}
-	UfsClose(-1);
+    int rfd = DirOpen();
+    struct Dirent *dirent = DirRead(rfd);
+    while (dirent != NULL) {
+        printf("%s\n", dirent->name);
+        free(dirent);
+        dirent = DirRead(rfd);
+    }
+    UfsClose(-1);
     return 0;
 }

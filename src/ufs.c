@@ -28,9 +28,10 @@ static inline void _free_file(struct DInode *dI)
     return;
 }
 
-static void _ufs_close() {
-	UfsClose(-1);
-	return;
+static void _ufs_close()
+{
+    UfsClose(-1);
+    return;
 }
 
 int UfsInit(char *path)
@@ -51,7 +52,7 @@ int UfsInit(char *path)
         fclose(ufsFp);
         if (Init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
         printf("文件系统初始化成功\n");
-		atexit(_ufs_close); // 注册
+        atexit(_ufs_close); // 注册
         return 0;
     }
     if (fseek(ufsFp, 0, SEEK_SET) < 0) _quit("UfsInitL fseek failed");
@@ -64,19 +65,19 @@ int UfsInit(char *path)
         printf("无效的磁盘\n新的磁盘生成中\n");
         if (Init(path) < 0) _quit("UfsInit: 初始化磁盘块失败");
         printf("文件系统初始化成功\n");
-		atexit(_ufs_close); // 注册
+        atexit(_ufs_close); // 注册
         return 0;
     }
 
     printf("文件系统初始化成功\n");
-	atexit(_ufs_close); // 注册
+    atexit(_ufs_close); // 注册
     return 0;
 }
 
 int UfsOpen(char *path, int oflag)
 {
-	if (strlen(path) > 28)return -1;
-	if (oflag & 3 == 3)return BADOFLAG;
+    if (strlen(path) > 28) return -1;
+    if (oflag & 3 == 3) return BADOFLAG;
 
     int iNum = 0;
     if (NameI(&iNum, path, oflag) < 0) return NOTHATFL;
@@ -86,7 +87,7 @@ int UfsOpen(char *path, int oflag)
     // 填充索引节点表
     struct DInode *Dp = malloc(sizeof(struct DInode));
     mInodes[ufd].Dp = Dp;
-    mInodes[ufd].oflag = oflag & (UO_APPEND | UO_RDWR |UO_WR); // 和7位与
+    mInodes[ufd].oflag = oflag & (UO_APPEND | UO_RDWR | UO_WR); // 和7位与
     mInodes[ufd].iNbr = iNum;
     Fseek(ufsFp, ITABLESEEK + iNum * INODESIZE, SEEK_SET);
     Fread(Dp, sizeof(struct DInode), 1, ufsFp);
@@ -123,7 +124,7 @@ int UfsClose(int ufd)
         }
         Fseek(ufsFp, 0, SEEK_SET);
         Fwrite(&super, sizeof(super), 1, ufsFp);
-		fprintf(stderr, "Ufs exit\n");
+        fprintf(stderr, "Ufs exit\n");
     } else {
         struct MInode *mI = &mInodes[ufd];
         if (mI->Dp == NULL) return -1;
@@ -145,11 +146,11 @@ int UfsClose(int ufd)
 
 int UfsRead(int ufd, void *buff, int len)
 {
-	if (ufd < 0 || ufd > maxUfd)return BADUFD;
+    if (ufd < 0 || ufd > maxUfd) return BADUFD;
     char *buf = (char *) buff;
     struct MInode *mI = &mInodes[ufd];
 
-	if (mI->oflag & 3 == UO_WR)return WRONLY;
+    if (mI->oflag & 3 == UO_WR) return WRONLY;
 
     if (mI->Dp == NULL) return BADUFD;      // 没有打开的文件描述符
     if (mI->pos == mI->Dp->fSize) return 0; // EOF
@@ -173,15 +174,15 @@ int UfsRead(int ufd, void *buff, int len)
 }
 int UfsWrite(int ufd, void *buff, int len)
 {
-	if (ufd < 0 || ufd > maxUfd)return BADUFD;
+    if (ufd < 0 || ufd > maxUfd) return BADUFD;
     char *buf = (char *) buff;
     struct MInode *mI = &mInodes[ufd];
 
-	if (mI->oflag & 3 == UO_RD)return RDONLY;
+    if (mI->oflag & 3 == UO_RD) return RDONLY;
 
     if (mI->Dp == NULL) return BADUFD; // 没有打开的文件描述符
-	int append = mI->pos;
-	if (mI->oflag & UO_APPEND)mI->pos = mI->Dp->fSize;
+    int append = mI->pos;
+    if (mI->oflag & UO_APPEND) mI->pos = mI->Dp->fSize;
 
     int n = 0;
     int ipos, bpos;
@@ -189,7 +190,7 @@ int UfsWrite(int ufd, void *buff, int len)
         int i = 0, nBlk = 0;
         bpos = mI->pos / BLKSIZE;
         ipos = mI->pos % BLKSIZE;
-        if ((mI->Dp->fSize-1)/ BLKSIZE  < bpos || mI->Dp->fSize == 0)
+        if ((mI->Dp->fSize - 1) / BLKSIZE < bpos || mI->Dp->fSize == 0)
             if (BAlloc(bpos, mI->Dp) < 0) return NOMOREBLKS;
         BRead(bpos, mI->Dp);
         while (n != len) {
@@ -204,7 +205,8 @@ int UfsWrite(int ufd, void *buff, int len)
             if ((map = BAlloc(bpos, mI->Dp)) < 0) return NOMOREBLKS;
         FSW(cachBlk, sizeof(cachBlk), map * BLKSIZE);
     }
-	if (mI->oflag & UO_APPEND)mI->pos = append; // 如果为追加模式，则恢复原来的文件偏移量
+    if (mI->oflag & UO_APPEND)
+        mI->pos = append; // 如果为追加模式，则恢复原来的文件偏移量
     return n;
 }
 
@@ -262,12 +264,11 @@ int UfsUnlink(char *path)
 int DirOpen() { return UfsOpen("/", 0); }
 struct Dirent *DirRead(int ufd)
 {
-	if (ufd < 0 || ufd > maxUfd)return BADUFD;
-	if (mInodes[ufd].Dp->type != DIRTYPE)return NOTROOT;
+    if (ufd < 0 || ufd > maxUfd) return NULL;
+    if (mInodes[ufd].Dp->type != DIRTYPE) return NULL;
 
     struct Dirent *dirent = (struct Dirent *) malloc(sizeof(struct Dirent));
     struct Dir dir;
-
 
     if (0 == UfsRead(ufd, &dir, sizeof(struct Dir))) return NULL;
     memcpy(dirent->name, dir.name, sizeof(dirent->name));
