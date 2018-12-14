@@ -244,7 +244,7 @@ int BRead(int pos, struct DInode *inode) {
 		FSR(cachBlk, sizeof(cachBlk), iNbr * BLKSIZE);
 	return iNbr;
 }
-// 没写完
+// 没写完,不考虑266K以上的大文件
 int BAlloc(int pos, struct DInode *inode) {
 
 	// 直接块、一级间接块、二级间接块、三级间接块
@@ -268,8 +268,10 @@ int BAlloc(int pos, struct DInode *inode) {
 		FSW(blks1, sizeof(blks1), inode->blkAddr[10] * BLKSIZE);
 	}
 	else if (pos < 10 + 256 + 256 * 256) { // 太麻烦了，暂时不写
+		return -1;
 	}
 	else { // 太麻烦了，暂时不写
+		return -1;
 	}
 	return 1;
 }

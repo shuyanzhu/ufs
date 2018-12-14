@@ -23,10 +23,11 @@
 #define NOTROOT -6
 #define WRONLY -8
 #define RDONLY -9
-#define BADOFLAG -19
+#define BADOFLAG -10
+#define PATHTOOLONG -11
 
 struct Dirent {
-	char name[28];
+	char name[29];
 };
 // 初始化文件系统
 int UfsInit(char *path);

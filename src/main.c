@@ -14,10 +14,9 @@ int main()
 {
     UfsInit("ufs");
     char s[100] = {0};
-    printf("%d\n", -1 / 1024);
 
-    int fd = UfsOpen("/abbc", UO_CREAT);
-    int fd1 = UfsOpen("/edfv", UO_CREAT);
+    int fd = UfsOpen("/abbbc", UO_CREAT);
+    int fd1 = UfsOpen("/edfklk", UO_CREAT);
 
     // char buf[] = "1234576970757665324345657568968987566";
     // UfsWrite(fd, buf, sizeof(buf));

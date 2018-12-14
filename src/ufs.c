@@ -69,14 +69,14 @@ int UfsInit(char *path)
         return 0;
     }
 
-    printf("文件系统初始化成功\n");
+    printf("文件系统初始化成功\\n");
     atexit(_ufs_close); // 注册
     return 0;
 }
 
 int UfsOpen(char *path, int oflag)
 {
-    if (strlen(path) > 28) return -1;
+    if (strlen(path) > 28) return PATHTOOLONG;
     if (oflag & 3 == 3) return BADOFLAG;
 
     int iNum = 0;
@@ -268,10 +268,12 @@ struct Dirent *DirRead(int ufd)
     if (ufd < 0 || ufd > maxUfd) return NULL;
     if (mInodes[ufd].Dp->type != DIRTYPE) return NULL;
 
-    struct Dirent *dirent = (struct Dirent *) malloc(sizeof(struct Dirent));
+	struct Dirent *dirent;
     struct Dir dir;
 
     if (0 == UfsRead(ufd, &dir, sizeof(struct Dir))) return NULL;
-    memcpy(dirent->name, dir.name, sizeof(dirent->name));
+	dirent = (struct Dirent *) malloc(sizeof(struct Dirent));
+	dirent->name[0] = '/';
+    memcpy(dirent->name+1, dir.name, sizeof(dir.name));
     return dirent;
 }
