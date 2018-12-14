@@ -178,7 +178,8 @@ int UfsWrite(int ufd, void *buff, int len)
     char *buf = (char *) buff;
     struct MInode *mI = &mInodes[ufd];
 
-    if (mI->oflag & 3 == UO_RD) return RDONLY;
+	if (mI->Dp->type == DIRTYPE) return BADUFD; // 目录类型，不允许写
+    if (mI->oflag & 3 == UO_RD) return RDONLY; // 只读，不允许写
 
     if (mI->Dp == NULL) return BADUFD; // 没有打开的文件描述符
     int append = mI->pos;

@@ -17,7 +17,7 @@ int main()
     printf("%d\n", -1 / 1024);
 
     int fd = UfsOpen("/abbc", UO_CREAT);
-    int fd1 = UfsOpen("/mingming", UO_CREAT);
+    int fd1 = UfsOpen("/edfv", UO_CREAT);
 
     // char buf[] = "1234576970757665324345657568968987566";
     // UfsWrite(fd, buf, sizeof(buf));
