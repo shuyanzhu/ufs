@@ -12,12 +12,12 @@
 #include "../include/ufs_struct.h"
 
 // 初始化
-struct SuperBlk super;
-FILE *ufsFp;
-struct MInode mInodes[MINODES];
-int maxUfd = 0;
-char cachBlk[BLKSIZE];
-char zeros[BLKSIZE] = { 0 };
+struct SuperBlk super; // 超级块
+struct MInode mInodes[MINODES]; // 索引节点表，用文件描述符作偏移量
+int maxUfd; // 最大的文件描述符
+FILE *ufsFp; // 和模拟文件系统有关的文件流
+char cachBlk[BLKSIZE]; // 读磁盘块时的缓冲
+
 // 初始化磁盘块
 int Init(char *path)
 {

@@ -92,20 +92,20 @@ int FreeBlk(int blkNbr);
 int AllocI();
 int FreeI(int iNbr);
 
-// 在已经打开的文件中找
-int FindOpenedI(int iNbr);
-// 获得文件描述符
-int FindNextMInode(int iNbr);
 
-// 查找目录项
-int FindDirent(char *path, struct DInode *rootI, struct Dir dirs[RDDIRNUM], int *i);
-// 将文件名转为索引节点号
-int NameI(int *iNum, char *path, int oflag);
 // 将逻辑块号偏移量转换为磁盘块号
 int BMap(int pos, struct DInode i);
 int BRead(int pos, struct DInode *inode);
 int BAlloc(int pos, struct DInode *inode);
 int BFree(int pos, struct DInode *inode);
 
+// 在已经打开的文件中找
+int FindOpenedI(int iNbr);
+// 获得文件描述符
+int FindNextMInode(int iNbr);
+// 查找目录项
+int FindDirent(char *path, struct DInode *rootI, struct Dir dirs[RDDIRNUM], int *i);
+// 将文件名转为索引节点号
+int NameI(int *iNum, char *path, int oflag);
 
 #endif

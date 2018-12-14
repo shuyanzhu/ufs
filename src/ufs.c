@@ -12,12 +12,11 @@
 #include "../include/ufs_struct.h"
 #include "../include/ufs.h"
 // 全局变量
-extern struct SuperBlk super;
-extern struct MInode mInodes[MINODES];
-extern FILE *ufsFp;
-extern int maxUfd;
-extern char cachBlk[BLKSIZE];
-extern char zeros[BLKSIZE];
+extern struct SuperBlk super; // 超级块
+extern struct MInode mInodes[MINODES]; // 索引节点表，用文件描述符作偏移量
+extern int maxUfd; // 最大的文件描述符
+extern FILE *ufsFp; // 和模拟文件系统有关的文件流
+extern char cachBlk[BLKSIZE]; // 读磁盘块时的缓冲
 
 static inline void _free_file(struct DInode *dI)
 {
