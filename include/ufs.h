@@ -26,8 +26,10 @@
 #define BADOFLAG -10
 #define PATHTOOLONG -11
 
-struct Dirent {
-	char name[29];
+// 目录结构
+struct Dirent
+{
+    char name[29];
 };
 // 初始化文件系统
 int UfsInit(char *path);
